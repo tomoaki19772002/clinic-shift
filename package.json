@@ -10,7 +10,11 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.29.2",
+    "@types/nodemailer": "^8.0.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "next": "14.2.5",
+    "nodemailer": "^8.0.4",
     "react": "^18",
     "react-dom": "^18"
   },

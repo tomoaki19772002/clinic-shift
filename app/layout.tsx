@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "ToDo リスト",
-  description: "シンプルなToDo管理アプリ",
+  title: "川越あさひ眼科　問診票",
+  description: "川越あさひ眼科の問診票です。",
 };
 
 export default function RootLayout({
@@ -18,8 +18,9 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap"
           rel="stylesheet"
         />
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
       </head>
-      <body className="antialiased">{children}</body>
+      <body className="antialiased bg-slate-50 font-sans">{children}</body>
     </html>
   );
 }

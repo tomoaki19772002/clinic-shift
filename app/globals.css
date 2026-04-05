@@ -2,34 +2,52 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #f8f7f4;
-  --foreground: #1a1a2e;
+* {
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
   font-family: 'Noto Sans JP', system-ui, sans-serif;
 }
 
-@layer utilities {
-  .task-enter {
-    animation: taskEnter 0.25s ease-out forwards;
-  }
-
-  .task-done {
-    animation: taskDone 0.2s ease-in forwards;
-  }
+/* タッチ操作向けチェックボックス・ラジオボタン */
+.touch-checkbox,
+.touch-radio {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 2px solid #e2e8f0;
+  background: white;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+  min-height: 56px;
 }
 
-@keyframes taskEnter {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.touch-checkbox:active,
+.touch-radio:active {
+  transform: scale(0.97);
+}
+
+.touch-checkbox.selected {
+  border-color: #0d9488;
+  background: #f0fdfa;
+}
+
+.touch-radio.selected {
+  border-color: #0d9488;
+  background: #f0fdfa;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 2px;
 }
