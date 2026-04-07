@@ -22,9 +22,12 @@ function buildPdfHtml(form: Record<string, unknown>): string {
 
   const row = (label: string, value: string) =>
     `<tr>
-      <td style="padding:8px 12px;font-weight:bold;color:#475569;background:#f8fafc;white-space:nowrap;border:1px solid #e2e8f0;width:160px">${label}</td>
-      <td style="padding:8px 12px;color:#1e293b;border:1px solid #e2e8f0">${value}</td>
+      <td style="padding:4px 8px;font-weight:bold;color:#475569;background:#f8fafc;white-space:nowrap;border:1px solid #e2e8f0;width:120px;font-size:11px">${label}</td>
+      <td style="padding:4px 8px;color:#1e293b;border:1px solid #e2e8f0;font-size:11px">${value}</td>
     </tr>`;
+
+  const sectionTitle = (title: string) =>
+    `<div style="font-size:10px;font-weight:700;color:#fff;background:#0f766e;padding:3px 8px;margin:8px 0 4px;letter-spacing:0.08em">${title}</div>`;
 
   return `<!DOCTYPE html>
 <html lang="ja">
@@ -32,14 +35,17 @@ function buildPdfHtml(form: Record<string, unknown>): string {
   <meta charset="UTF-8"/>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
-    body { font-family: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', sans-serif; background:#fff; margin:0; padding:0; }
-    .page { max-width:680px; margin:0 auto; padding:32px 24px; }
-    .header { background:#0f766e; color:#fff; border-radius:8px; padding:20px 24px; margin-bottom:24px; }
-    .header h1 { margin:0 0 4px; font-size:20px; font-weight:700; letter-spacing:0.08em; }
-    .header p { margin:0; font-size:12px; color:#99f6e4; }
-    .section-title { font-size:11px; font-weight:700; color:#94a3b8; letter-spacing:0.12em; text-transform:uppercase; margin:20px 0 8px; }
-    table { width:100%; border-collapse:collapse; font-size:14px; margin-bottom:4px; }
-    .footer { margin-top:32px; font-size:11px; color:#94a3b8; text-align:center; }
+    @page { size: A4; margin: 12mm; }
+    * { box-sizing: border-box; }
+    body { font-family: 'Noto Sans JP', 'Hiragino Sans', 'Yu Gothic', sans-serif; background:#fff; margin:0; padding:0; font-size:11px; }
+    .page { width:100%; padding:0; }
+    .header { background:#0f766e; color:#fff; padding:8px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; }
+    .header h1 { margin:0; font-size:15px; font-weight:700; letter-spacing:0.08em; }
+    .header p { margin:0; font-size:10px; color:#99f6e4; }
+    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:0 12px; }
+    .col {}
+    table { width:100%; border-collapse:collapse; margin-bottom:0; }
+    .footer { margin-top:8px; font-size:9px; color:#94a3b8; text-align:center; border-top:1px solid #e2e8f0; padding-top:4px; }
   </style>
 </head>
 <body>
@@ -49,40 +55,48 @@ function buildPdfHtml(form: Record<string, unknown>): string {
       <p>受付日時：${new Date().toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}</p>
     </div>
 
-    <div class="section-title">基本情報</div>
-    <table>
-      ${row("お名前", arr(form.name))}
-      ${row("メールアドレス", arr(form.email))}
-      ${row("性別", arr(form.gender))}
-      ${row("生年月日", arr(form.birthDate))}
-      ${row("住所", arr(form.address))}
-      ${row("電話番号", arr(form.phone))}
-    </table>
+    <div class="two-col">
+      <div class="col">
+        ${sectionTitle("基本情報")}
+        <table>
+          ${row("よみがな", arr(form.yomigana))}
+          ${row("お名前", arr(form.name))}
+          ${row("性別", arr(form.gender))}
+          ${row("生年月日", arr(form.birthDate))}
+          ${row("郵便番号", arr(form.postalCode))}
+          ${row("住所", arr(form.address))}
+          ${row("電話番号", arr(form.phone))}
+          ${row("メールアドレス", arr(form.email))}
+        </table>
 
-    <div class="section-title">症状</div>
-    <table>
-      ${row("症状のある目", arr(form.affectedEye))}
-      ${row("症状", arr(symptoms))}
-      ${row("症状の開始時期", arr(form.symptomOnset))}
-    </table>
+        ${sectionTitle("症状")}
+        <table>
+          ${row("症状のある目", arr(form.affectedEye))}
+          ${row("症状", arr(symptoms))}
+          ${row("症状の開始時期", arr(form.symptomOnset))}
+        </table>
+      </div>
 
-    <div class="section-title">眼科・病歴</div>
-    <table>
-      ${row("過去の目の病気", arr(pastEye))}
-      ${row("通院中の眼科", arr(form.currentEyeClinic))}
-      ${row("全身の病気", arr(general))}
-      ${row("服薬・サプリ・目薬", arr(form.medications))}
-    </table>
+      <div class="col">
+        ${sectionTitle("眼科・病歴")}
+        <table>
+          ${row("過去の目の病気", arr(pastEye))}
+          ${row("通院中の眼科", arr(form.currentEyeClinic))}
+          ${row("全身の病気", arr(general))}
+          ${row("服薬・サプリ・目薬", arr(form.medications))}
+        </table>
 
-    <div class="section-title">その他</div>
-    <table>
-      ${row("アレルギー", arr(form.allergies))}
-      ${row("お薬手帳", arr(form.medicationBooklet))}
-      ${row("メガネ・コンタクト", arr(form.visionCorrection))}
-      ${row("妊娠・授乳", arr(form.pregnancy))}
-    </table>
+        ${sectionTitle("その他")}
+        <table>
+          ${row("アレルギー", arr(form.allergies))}
+          ${row("お薬手帳", arr(form.medicationBooklet))}
+          ${row("メガネ・コンタクト", arr(form.visionCorrection))}
+          ${row("妊娠・授乳", arr(form.pregnancy))}
+        </table>
+      </div>
+    </div>
 
-    <div class="footer">このPDFは川越あさひ眼科の問診票システムにより自動生成されました。</div>
+    <div class="footer">川越あさひ眼科　問診票システム　自動生成</div>
   </div>
 </body>
 </html>`;
@@ -110,10 +124,12 @@ function buildTextBody(form: Record<string, unknown>): string {
 ${"=".repeat(50)}
 
 【基本情報】
+よみがな　：${arr(form.yomigana)}
 お名前　　：${arr(form.name)}
 メール　　：${arr(form.email)}
 性別　　　：${arr(form.gender)}
 生年月日　：${arr(form.birthDate)}
+郵便番号　：${arr(form.postalCode)}
 住所　　　：${arr(form.address)}
 電話番号　：${arr(form.phone)}
 

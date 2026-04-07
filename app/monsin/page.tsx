@@ -3,10 +3,12 @@
 import { useState, useRef } from "react";
 
 type FormData = {
+  yomigana: string;
   name: string;
   email: string;
   gender: string;
   birthDate: string;
+  postalCode: string;
   address: string;
   phone: string;
   affectedEye: string;
@@ -26,10 +28,12 @@ type FormData = {
 };
 
 const initialData: FormData = {
+  yomigana: "",
   name: "",
   email: "",
   gender: "",
   birthDate: "",
+  postalCode: "",
   address: "",
   phone: "",
   affectedEye: "",
@@ -273,9 +277,11 @@ export default function Home() {
 
   const validateStep = () => {
     if (step === 0) {
+      if (!form.yomigana.trim()) return "よみがなを入力してください。";
       if (!form.name.trim()) return "お名前を入力してください。";
       if (!form.gender) return "性別を選択してください。";
       if (!form.birthDate) return "生年月日を入力してください。";
+      if (!form.postalCode.trim()) return "郵便番号を入力してください。";
       if (!form.address.trim()) return "住所を入力してください。";
       if (!form.phone.trim()) return "電話番号を入力してください。";
     }
@@ -421,6 +427,10 @@ export default function Home() {
             </h2>
             <div className="space-y-5">
               <div>
+                <SectionLabel required>よみがな</SectionLabel>
+                <TextInput value={form.yomigana} onChange={(v) => set("yomigana", v)} placeholder="例：やまだ たろう" />
+              </div>
+              <div>
                 <SectionLabel required>お名前</SectionLabel>
                 <TextInput value={form.name} onChange={(v) => set("name", v)} placeholder="例：山田 太郎" />
               </div>
@@ -439,6 +449,10 @@ export default function Home() {
               <div>
                 <SectionLabel required>生年月日</SectionLabel>
                 <TextInput value={form.birthDate} onChange={(v) => set("birthDate", v)} type="date" />
+              </div>
+              <div>
+                <SectionLabel required>郵便番号</SectionLabel>
+                <TextInput value={form.postalCode} onChange={(v) => set("postalCode", v)} placeholder="例：350-0000" type="tel" />
               </div>
               <div>
                 <SectionLabel required>住所</SectionLabel>
@@ -615,10 +629,12 @@ export default function Home() {
               </h3>
 
               <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">基本情報</p>
+              <SummaryRow label="よみがな" value={form.yomigana} />
               <SummaryRow label="お名前" value={form.name} />
               <SummaryRow label="メールアドレス" value={form.email} />
               <SummaryRow label="性別" value={form.gender} />
               <SummaryRow label="生年月日" value={form.birthDate} />
+              <SummaryRow label="郵便番号" value={form.postalCode} />
               <SummaryRow label="住所" value={form.address} />
               <SummaryRow label="電話番号" value={form.phone} />
 
