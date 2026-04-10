@@ -718,12 +718,36 @@ type ColDef = {
   ds: string;
 };
 
+// localStorage キー
+function storageKey(y: number, m: number) { return `shift-${y}-${m}`; }
+
+function saveToStorage(y: number, m: number, s: Schedule) {
+  try { localStorage.setItem(storageKey(y, m), JSON.stringify(s)); } catch {}
+}
+function loadFromStorage(y: number, m: number): Schedule | null {
+  try {
+    const raw = localStorage.getItem(storageKey(y, m));
+    return raw ? (JSON.parse(raw) as Schedule) : null;
+  } catch { return null; }
+}
+
 export default function ShiftPage() {
   const [year, setYear]   = useState(2026);
   const [month, setMonth] = useState(5);
-  const [sch, setSch]     = useState<Schedule>(() => generate(2026, 5));
+  const [sch, setSch]     = useState<Schedule>(() => loadFromStorage(2026, 5) ?? generate(2026, 5));
   const [modal, setModal] = useState<{ staffId: string; ds: string; slot: Slot } | null>(null);
   const [showWarns, setShowWarns] = useState(false);
+  const [savedMonths, setSavedMonths] = useState<Set<string>>(() => {
+    // 保存済みキー一覧を初期化
+    const keys = new Set<string>();
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k?.startsWith("shift-")) keys.add(k);
+      }
+    } catch {}
+    return keys;
+  });
 
   const dates = useMemo(() => getRange(year, month), [year, month]);
   const warns  = useMemo(() => validate(sch, dates), [sch, dates]);
@@ -741,10 +765,30 @@ export default function ShiftPage() {
     return Array.from(map.entries());
   }, []);
 
+  // 年月切替: 保存済みがあれば読込、なければ新規生成
+  function handleYearChange(y: number) {
+    setYear(y);
+    setSch(loadFromStorage(y, month) ?? generate(y, month));
+    setShowWarns(false);
+  }
+  function handleMonthChange(m: number) {
+    setMonth(m);
+    setSch(loadFromStorage(year, m) ?? generate(year, m));
+    setShowWarns(false);
+  }
+
   function handleGenerate() {
     setSch(generate(year, month));
     setShowWarns(false);
   }
+
+  function handleSave() {
+    saveToStorage(year, month, sch);
+    setSavedMonths((prev) => new Set(prev).add(storageKey(year, month)));
+    alert(`${year}年${month}月のシフトを保存しました。`);
+  }
+
+  const isSaved = savedMonths.has(storageKey(year, month));
 
   function applyRole(role: Role) {
     if (!modal) return;
@@ -781,7 +825,7 @@ export default function ShiftPage() {
 
         <select
           value={year}
-          onChange={(e) => setYear(Number(e.target.value))}
+          onChange={(e) => handleYearChange(Number(e.target.value))}
           className="bg-white text-slate-800 text-sm px-1.5 py-0.5 rounded"
         >
           {[2025, 2026, 2027].map((y) => (
@@ -791,7 +835,7 @@ export default function ShiftPage() {
 
         <select
           value={month}
-          onChange={(e) => setMonth(Number(e.target.value))}
+          onChange={(e) => handleMonthChange(Number(e.target.value))}
           className="bg-white text-slate-800 text-sm px-1.5 py-0.5 rounded"
         >
           {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
@@ -806,7 +850,16 @@ export default function ShiftPage() {
           シフト生成
         </button>
 
-        <span className="text-slate-400 text-xs hidden sm:inline">{periodLabel}</span>
+        <button
+          onClick={handleSave}
+          className="bg-green-600 hover:bg-green-500 active:bg-green-700 px-3 py-1 rounded text-sm font-bold"
+        >
+          保存
+        </button>
+
+        <span className="text-slate-400 text-xs hidden sm:inline">
+          {periodLabel}{isSaved ? " 💾" : ""}
+        </span>
 
         <button
           onClick={() => setShowWarns((v) => !v)}
