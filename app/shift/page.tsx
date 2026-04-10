@@ -17,6 +17,7 @@ type Role =
   | "診察"
   | "レンズ"
   | "休"
+  | "有休"
   | "";
 
 type StaffType =
@@ -86,6 +87,7 @@ const ROLE_CLS: Record<string, string> = {
   診察:          "bg-teal-100 text-teal-700",
   レンズ:        "bg-cyan-100 text-cyan-700",
   休:            "bg-gray-100 text-gray-400",
+  有休:          "bg-pink-100 text-pink-600",
   "":            "",
 };
 
@@ -749,8 +751,8 @@ export default function ShiftPage() {
     const { staffId, ds, slot } = modal;
     setSch((prev) => {
       const n: Schedule = JSON.parse(JSON.stringify(prev));
-      if (role === "休") {
-        n[staffId][ds][slot] = { working: false, role: "休", fixed: false };
+      if (role === "休" || role === "有休") {
+        n[staffId][ds][slot] = { working: false, role, fixed: false };
       } else {
         n[staffId][ds][slot] = { working: true, role, fixed: false };
       }
@@ -919,7 +921,7 @@ export default function ShiftPage() {
                       className={`${cls} border border-slate-200 text-center cursor-pointer select-none px-1 py-0.5 relative min-w-[48px]`}
                       title={`${staff.name} ${ds} ${slot === "am" ? "午前" : "午後"}`}
                     >
-                      {cell.working ? (ROLE_SHORT[cell.role] ?? cell.role) || "○" : "休"}
+                      {cell.working ? (ROLE_SHORT[cell.role] ?? cell.role) || "○" : cell.role || "休"}
                       {cell.fixed && cell.working && (
                         <span className="absolute top-0 right-0 text-amber-500 leading-none" style={{ fontSize: "7px" }}>●</span>
                       )}
@@ -996,16 +998,24 @@ export default function ShiftPage() {
                 </button>
               ))}
 
+              {/* 有休 */}
+              <button
+                onClick={() => applyRole("有休")}
+                className={`w-full text-left px-3 py-2 rounded text-sm ${ROLE_CLS["有休"]} ${
+                  !modalCell.working && modalCell.role === "有休" ? "ring-2 ring-slate-500 font-bold" : ""
+                }`}
+              >
+                有休{!modalCell.working && modalCell.role === "有休" ? " ✓" : ""}
+              </button>
+
               {/* 休み */}
               <button
                 onClick={() => applyRole("休")}
-                className={`w-full text-left px-3 py-2 rounded text-sm ${
-                  ROLE_CLS["休"]
-                } ${
-                  !modalCell.working ? "ring-2 ring-slate-500 font-bold" : ""
+                className={`w-full text-left px-3 py-2 rounded text-sm ${ROLE_CLS["休"]} ${
+                  !modalCell.working && modalCell.role !== "有休" ? "ring-2 ring-slate-500 font-bold" : ""
                 }`}
               >
-                休（不在）{!modalCell.working ? " ✓" : ""}
+                休（不在）{!modalCell.working && modalCell.role !== "有休" ? " ✓" : ""}
               </button>
             </div>
 
