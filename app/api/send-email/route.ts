@@ -4,8 +4,13 @@ import nodemailer from "nodemailer";
 const TO_EMAIL = "kawagoeasahi+monsin@gmail.com";
 
 function buildPdfHtml(form: Record<string, unknown>): string {
+  // 通常表示（空なら「なし」）
   const arr = (v: unknown) =>
     Array.isArray(v) ? (v as string[]).join("、") || "なし" : (v as string) || "なし";
+
+  // 空なら「-」（病歴・その他用）
+  const arrDash = (v: unknown) =>
+    Array.isArray(v) ? (v as string[]).join("、") || "-" : (v as string) || "-";
 
   const symptoms = [
     ...((form.symptoms as string[]) || []),
@@ -20,10 +25,18 @@ function buildPdfHtml(form: Record<string, unknown>): string {
     ...((form.generalDiseasesOther as string) ? [form.generalDiseasesOther as string] : []),
   ];
 
+  // 通常行
   const row = (label: string, value: string) =>
     `<tr>
       <td style="padding:4px 8px;font-weight:bold;color:#475569;background:#f8fafc;white-space:nowrap;border:1px solid #e2e8f0;width:120px;font-size:11px">${label}</td>
       <td style="padding:4px 8px;color:#1e293b;border:1px solid #e2e8f0;font-size:11px">${value}</td>
+    </tr>`;
+
+  // 太字行（症状系）
+  const rowBold = (label: string, value: string) =>
+    `<tr>
+      <td style="padding:4px 8px;font-weight:bold;color:#475569;background:#f8fafc;white-space:nowrap;border:1px solid #e2e8f0;width:120px;font-size:11px">${label}</td>
+      <td style="padding:4px 8px;color:#1e293b;border:1px solid #e2e8f0;font-size:11px;font-weight:700">${value}</td>
     </tr>`;
 
   const sectionTitle = (title: string) =>
@@ -71,27 +84,27 @@ function buildPdfHtml(form: Record<string, unknown>): string {
 
         ${sectionTitle("症状")}
         <table>
-          ${row("症状のある目", arr(form.affectedEye))}
-          ${row("症状", arr(symptoms))}
-          ${row("症状の開始時期", arr(form.symptomOnset))}
+          ${rowBold("症状のある目", arr(form.affectedEye))}
+          ${rowBold("症状", arr(symptoms))}
+          ${rowBold("症状の開始時期", arr(form.symptomOnset))}
         </table>
       </div>
 
       <div class="col">
         ${sectionTitle("眼科・病歴")}
         <table>
-          ${row("過去の目の病気", arr(pastEye))}
-          ${row("通院中の眼科", arr(form.currentEyeClinic))}
-          ${row("全身の病気", arr(general))}
-          ${row("服薬・サプリ・目薬", arr(form.medications))}
+          ${row("過去の目の病気", arrDash(pastEye))}
+          ${row("通院中の眼科", arrDash(form.currentEyeClinic))}
+          ${row("全身の病気", arrDash(general))}
+          ${row("服薬・サプリ・目薬", arrDash(form.medications))}
         </table>
 
         ${sectionTitle("その他")}
         <table>
-          ${row("アレルギー", arr(form.allergies))}
+          ${row("アレルギー", arrDash(form.allergies))}
           ${row("お薬手帳", arr(form.medicationBooklet))}
-          ${row("メガネ・コンタクト", arr(form.visionCorrection))}
-          ${row("妊娠・授乳", arr(form.pregnancy))}
+          ${row("メガネ・コンタクト", arrDash(form.visionCorrection))}
+          ${row("妊娠・授乳", arrDash(form.pregnancy))}
         </table>
       </div>
     </div>
