@@ -992,7 +992,7 @@ export default function ShiftPage() {
 
                 return [
                   // 午前行
-                  <tr key={`${staff.id}-am`} className="hover:bg-blue-50">
+                  <tr key={`${staff.id}-am`} className="hover:bg-blue-50 staff-divider">
                     <td rowSpan={2} className="sticky left-0 z-10 bg-white border border-slate-200 px-2 py-0.5 font-medium whitespace-nowrap align-middle min-w-[72px]">
                       {staff.name}
                       {!staff.fulltime && <span className="ml-1 text-slate-400 text-xs">P</span>}

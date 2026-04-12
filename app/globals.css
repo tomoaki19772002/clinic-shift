@@ -6,6 +6,11 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+/* スタッフ区切り罫線 */
+tr.staff-divider > td {
+  border-top: 2px solid #94a3b8 !important;
+}
+
 body {
   font-family: 'Noto Sans JP', system-ui, sans-serif;
 }
@@ -50,4 +55,55 @@ body {
 ::-webkit-scrollbar-thumb {
   background: #94a3b8;
   border-radius: 2px;
+}
+
+/* ===== 印刷スタイル: A4横向き複数ページ ===== */
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: 8mm;
+  }
+
+  html, body {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* flex レイアウトを解除 */
+  body > div,
+  .flex.flex-col {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* テーブルラッパーの overflow・flex を解除し、幅を自然に広げる */
+  .flex-1.overflow-auto {
+    overflow: visible !important;
+    flex: none !important;
+    height: auto !important;
+    width: auto !important;
+  }
+
+  /* テーブルは縮小せず自然サイズで複数ページに流す */
+  table {
+    border-collapse: collapse !important;
+    table-layout: auto !important;
+  }
+
+  /* sticky 解除・余白を詰めて文字を読みやすいサイズに */
+  th, td {
+    position: static !important;
+    min-width: 0 !important;
+    padding: 2px 4px !important;
+    white-space: nowrap;
+    font-size: 10px !important;
+    line-height: 1.5 !important;
+  }
+
+  /* 背景色を印刷に反映 */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
 }
