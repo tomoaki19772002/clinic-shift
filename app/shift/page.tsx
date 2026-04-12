@@ -12,7 +12,7 @@ type Role =
   | "シュライバー①"
   | "シュライバー②"
   | "受付"
-  | "受付・レジ"
+  | "レジ"
   | "手術補助"
   | "洗浄"
   | "診察"
@@ -78,7 +78,7 @@ const ROLE_SHORT: Record<string, string> = {
   "シュライバー①": "①",
   "シュライバー②": "②",
   "受付":          "受",
-  "受付・レジ":    "レ",
+  "レジ":    "レ",
   "手術補助":      "手",
   "洗浄":          "洗",
   "診察":          "診",
@@ -93,7 +93,7 @@ const ROLE_CLS: Record<string, string> = {
   "シュライバー①": "bg-violet-100 text-violet-700",
   "シュライバー②": "bg-violet-200 text-violet-800",
   受付:          "bg-emerald-100 text-emerald-700",
-  "受付・レジ":  "bg-emerald-100 text-emerald-700",
+  "レジ":  "bg-emerald-100 text-emerald-700",
   手術補助:      "bg-amber-100 text-amber-700",
   洗浄:          "bg-orange-100 text-orange-700",
   診察:          "bg-teal-100 text-teal-700",
@@ -643,7 +643,7 @@ function generate(year: number, month: number): Schedule {
     }
   });
 
-  // Step 5: 火曜午後以外の各スロットに受付・レジを1名割り当て（均等ローテーション）
+  // Step 5: 火曜午後以外の各スロットにレジを1名割り当て（均等ローテーション）
   // 対象: matsunaga/kinoshita/ohama/taniguchi/watanabe/hattori/sugimoto の中で
   // その枠に「受付」として稼働中のスタッフを順番に選ぶ
   const REJI_ELIGIBLE = ["matsunaga", "kinoshita", "ohama", "taniguchi", "watanabe", "hattori", "sugimoto"];
@@ -660,7 +660,7 @@ function generate(year: number, month: number): Schedule {
         const id = REJI_ELIGIBLE[(rejiIdx + i) % REJI_ELIGIBLE.length];
         const cell = sch[id]?.[ds]?.[slot];
         if (cell?.working && cell.role === "受付") {
-          setRole(sch, id, ds, slot, "受付・レジ");
+          setRole(sch, id, ds, slot, "レジ");
           rejiIdx++;
           break;
         }
@@ -714,7 +714,7 @@ function validate(sch: Schedule, dates: string[]): Warning[] {
         if (!isTuePM && schr1.length < 1) warns.push({ ds, slot, msg: "シュライバー①0人（1人必要）" });
 
         const rec = working.filter((s) => roleOf(s.id) === "受付");
-        // 受付は最低2人（受付・レジは別途1名）
+        // 受付は最低2人（レジは別途1名）
         if (rec.length < 2) warns.push({ ds, slot, msg: `受付${rec.length}人（2人必要）` });
         if (isTuePM && rec.length > 2) warns.push({ ds, slot, msg: `受付${rec.length}人（2人固定）` });
       } else {
@@ -1072,7 +1072,7 @@ export default function ShiftPage() {
             <div className="space-y-1.5">
               {(modalStaff.skills as Role[]).flatMap((role): Role[] =>
                 role === "受付" && ["matsunaga","kinoshita","ohama","taniguchi","watanabe","hattori","sugimoto"].includes(modalStaff.id)
-                  ? ["受付", "受付・レジ"]
+                  ? ["受付", "レジ"]
                   : [role]
               ).map((role) => (
                 <button
