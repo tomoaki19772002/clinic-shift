@@ -79,6 +79,7 @@ const ROLE_SHORT: Record<string, string> = {
   "受付":          "受",
   "手術補助":      "手",
   "洗浄":          "洗",
+  "診察":          "診",
   "有休":          "有",
 };
 
@@ -978,7 +979,7 @@ export default function ShiftPage() {
                     <td
                       key={ci}
                       onClick={() => setModal({ staffId: staff.id, ds, slot })}
-                      className={`${cls} border border-slate-200 text-center cursor-pointer select-none px-1 py-0.5 relative min-w-[48px]`}
+                      className={`${cls} border border-slate-200 text-center cursor-pointer select-none px-1 py-0.5 relative min-w-[48px] font-bold`}
                       title={`${staff.name} ${ds} ${slot === "am" ? "午前" : "午後"}`}
                     >
                       {cell.working ? (ROLE_SHORT[cell.role] ?? cell.role) || "○" : cell.role || "休"}
