@@ -276,12 +276,12 @@ function assignRegular(
   const hattoriRole:   Role = phase === 1 ? "検査" : "受付";
 
   // ─── 医療事務1 の役割マップ (rotation位置 [0][1][2] に対応) ──
-  // phase 0 (谷口がシュライバー①を1枠担当): m1は シュライバー①+受付+検査
+  // phase 0 (谷口がシュライバー①を1枠担当): m1は シュライバー②+受付+検査
   // phase 1 (谷口が受付に回る):              m1は シュライバー①+シュライバー②(or受付)+受付
   // phase 2 (谷口がシュライバー①を1枠担当): m1は 受付+シュライバー②(or受付)+受付
   // oneSchr=true 時: 谷口が phase0/2 でシュライバー①を担当するため m1[0] は受付に
   const m1RolesByPhase: [Role, Role, Role][] = [
-    [oneSchr ? "受付" : "シュライバー①", "受付",                         "検査"],  // phase 0
+    [oneSchr ? "受付" : "シュライバー②", "受付",                         "検査"],  // phase 0
     ["シュライバー①",                    oneSchr ? "受付" : "シュライバー②", "受付"],  // phase 1
     ["受付",                             oneSchr ? "受付" : "シュライバー②", "受付"],  // phase 2
   ];
