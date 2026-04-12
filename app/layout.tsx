@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "計算チャレンジ",
-  description: "小学生向け計算練習アプリ",
+  title: "川越あさひ眼科　シフト表",
+  description: "川越あさひ眼科スタッフシフト管理",
 };
 
 export default function RootLayout({
