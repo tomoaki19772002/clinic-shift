@@ -12,6 +12,7 @@ type Role =
   | "シュライバー①"
   | "シュライバー②"
   | "受付"
+  | "受付・レジ"
   | "手術補助"
   | "洗浄"
   | "診察"
@@ -77,6 +78,7 @@ const ROLE_SHORT: Record<string, string> = {
   "シュライバー①": "①",
   "シュライバー②": "②",
   "受付":          "受",
+  "受付・レジ":    "レ",
   "手術補助":      "手",
   "洗浄":          "洗",
   "診察":          "診",
@@ -91,6 +93,7 @@ const ROLE_CLS: Record<string, string> = {
   "シュライバー①": "bg-violet-100 text-violet-700",
   "シュライバー②": "bg-violet-200 text-violet-800",
   受付:          "bg-emerald-100 text-emerald-700",
+  "受付・レジ":  "bg-emerald-100 text-emerald-700",
   手術補助:      "bg-amber-100 text-amber-700",
   洗浄:          "bg-orange-100 text-orange-700",
   診察:          "bg-teal-100 text-teal-700",
@@ -640,6 +643,31 @@ function generate(year: number, month: number): Schedule {
     }
   });
 
+  // Step 5: 各スロットの受付1人を受付・レジにローテーション
+  const rejiOrder = ["watanabe", "hattori", "kasai", "taniguchi", "matsunaga", "kinoshita", "ohama", "sugimoto"];
+  let rejiIdx = 0;
+  dates.forEach((ds) => {
+    if (!isWorkDay(ds)) return;
+    const dow = new Date(ds).getDay();
+    const slots: Slot[] = dow === 6 ? ["am"] : ["am", "pm"];
+    slots.forEach((slot) => {
+      const recWorkers = STAFF.filter(
+        (s) => sch[s.id]?.[ds]?.[slot]?.working && sch[s.id]?.[ds]?.[slot]?.role === "受付"
+      );
+      if (recWorkers.length === 0) return;
+      // rejiOrder を rejiIdx 位置から順に探し、受付中のスタッフを1人選ぶ
+      for (let i = 0; i < rejiOrder.length; i++) {
+        const id = rejiOrder[(rejiIdx + i) % rejiOrder.length];
+        const found = recWorkers.find((s) => s.id === id);
+        if (found) {
+          setRole(sch, found.id, ds, slot, "受付・レジ");
+          rejiIdx++;
+          break;
+        }
+      }
+    });
+  });
+
   return sch;
 }
 
@@ -685,7 +713,7 @@ function validate(sch: Schedule, dates: string[]): Warning[] {
         const schr1 = working.filter((s) => roleOf(s.id) === "シュライバー①");
         if (!isTuePM && schr1.length < 1) warns.push({ ds, slot, msg: "シュライバー①0人（1人必要）" });
 
-        const rec = working.filter((s) => roleOf(s.id) === "受付");
+        const rec = working.filter((s) => roleOf(s.id) === "受付" || roleOf(s.id) === "受付・レジ");
         // 火午後=2人、木午後=3人
         const recMin = isThuPM ? 3 : 2;
         if (rec.length < recMin) warns.push({ ds, slot, msg: `受付${rec.length}人（${recMin}人必要）` });
@@ -700,7 +728,7 @@ function validate(sch: Schedule, dates: string[]): Warning[] {
         );
         if (kensakei.length < 3) warns.push({ ds, slot, msg: `視能+検査${kensakei.length}人（3〜5人必要）` });
 
-        const rec = working.filter((s) => roleOf(s.id) === "受付");
+        const rec = working.filter((s) => roleOf(s.id) === "受付" || roleOf(s.id) === "受付・レジ");
         if (rec.length < 3) warns.push({ ds, slot, msg: `受付${rec.length}人（3人以上必要）` });
 
         // oneSchr日時(火AM/木PM/土AM)はシュライバー①1人、それ以外は①+②合計2人
@@ -1043,7 +1071,9 @@ export default function ShiftPage() {
 
             {/* 役割ボタン */}
             <div className="space-y-1.5">
-              {(modalStaff.skills as Role[]).map((role) => (
+              {(modalStaff.skills as Role[]).flatMap((role): Role[] =>
+                role === "受付" ? ["受付", "受付・レジ"] : [role]
+              ).map((role) => (
                 <button
                   key={role}
                   onClick={() => applyRole(role)}
