@@ -80,6 +80,7 @@ const ROLE_SHORT: Record<string, string> = {
   "手術補助":      "手",
   "洗浄":          "洗",
   "診察":          "診",
+  "レンズ":        "Le",
   "有休":          "有",
 };
 
