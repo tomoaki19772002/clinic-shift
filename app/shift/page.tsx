@@ -98,7 +98,7 @@ const ROLE_CLS: Record<string, string> = {
   洗浄:          "bg-orange-100 text-orange-700",
   診察:          "bg-teal-100 text-teal-700",
   レンズ:        "bg-cyan-100 text-cyan-700",
-  休:            "bg-gray-100 text-gray-400",
+  休:            "bg-gray-100 text-gray-900",
   有休:          "bg-pink-100 text-pink-600",
   "":            "",
 };
@@ -1002,7 +1002,7 @@ export default function ShiftPage() {
                   if (!cell) return <td key={ci} className="border border-slate-200 bg-slate-50" />;
                   const cls = cell.working
                     ? ROLE_CLS[cell.role] ?? "bg-white text-slate-600"
-                    : "bg-gray-100 text-gray-400";
+                    : ROLE_CLS[cell.role] ?? "bg-gray-100 text-gray-900";
                   return (
                     <td
                       key={ci}
