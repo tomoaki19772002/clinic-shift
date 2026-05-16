@@ -270,18 +270,22 @@ function assignRegular(
   // phase 1: 谷口=受付,           服部=検査
   // phase 2: 谷口=シュライバー①,  服部=受付
   // oneSchr時: phase!=1の谷口シュライバーはシュライバー①のまま（既に①指定）
-  const taniguchiRole: Role = phase === 1 ? "受付" : "シュライバー①";
+  // phase0(非oneSchr)は②を担当してローテーション均等化
+  const taniguchiRole: Role =
+    phase === 1 ? "受付" :
+    (phase === 0 && !oneSchr) ? "シュライバー②" :
+    "シュライバー①";
   // 渡邉: 火(2)・木(4)は検査、それ以外は受付
   const watanabeRole:  Role = (dow === 2 || dow === 4) ? "検査" : "受付";
   const hattoriRole:   Role = phase === 1 ? "検査" : "受付";
 
   // ─── 医療事務1 の役割マップ (rotation位置 [0][1][2] に対応) ──
-  // phase 0 (谷口がシュライバー①を1枠担当): m1は シュライバー②+受付+検査
-  // phase 1 (谷口が受付に回る):              m1は シュライバー①+シュライバー②(or受付)+受付
-  // phase 2 (谷口がシュライバー①を1枠担当): m1は 受付+シュライバー②(or受付)+受付
+  // phase 0 (谷口がシュライバー②を担当): m1は シュライバー①+受付+検査
+  // phase 1 (谷口が受付に回る):            m1は シュライバー①+シュライバー②(or受付)+受付
+  // phase 2 (谷口がシュライバー①を担当): m1は 受付+シュライバー②(or受付)+受付
   // oneSchr=true 時: 谷口が phase0/2 でシュライバー①を担当するため m1[0] は受付に
   const m1RolesByPhase: [Role, Role, Role][] = [
-    [oneSchr ? "受付" : "シュライバー②", "受付",                         "検査"],  // phase 0
+    [oneSchr ? "受付" : "シュライバー①", "受付",                         "検査"],  // phase 0
     ["シュライバー①",                    oneSchr ? "受付" : "シュライバー②", "受付"],  // phase 1
     ["受付",                             oneSchr ? "受付" : "シュライバー②", "受付"],  // phase 2
   ];
@@ -517,6 +521,11 @@ function assignWeeklyOff(sch: Schedule, dates: string[]) {
         });
       }
 
+      // 木曜日は全員出勤のため、平野以外は木曜をオフ候補から除外
+      if (s.id !== "hirano") {
+        candidates = candidates.filter(({ ds }) => new Date(ds).getDay() !== 4);
+      }
+
       if (candidates.length === 0) return;
 
       // (staffIdx + weekIdx) % 候補数 で決定論的に1枠を選択
@@ -587,8 +596,15 @@ function generate(year: number, month: number): Schedule {
     const kasaiSlots = slots.filter(({ ds, slot }) => !(new Date(ds).getDay() === 2 && slot === "pm"));
     const ams = kasaiSlots.filter((x) => x.slot === "am");
     const pms = kasaiSlots.filter((x) => x.slot === "pm");
+    // 午前・午後を均等にするためPM優先でインターリーブ
+    const interleaved: Array<{ ds: string; slot: Slot }> = [];
+    const maxLen = Math.max(ams.length, pms.length);
+    for (let i = 0; i < maxLen; i++) {
+      if (i < pms.length) interleaved.push(pms[i]);
+      if (i < ams.length) interleaved.push(ams[i]);
+    }
     let count = 0;
-    [...ams, ...pms].forEach(({ ds, slot }) => {
+    interleaved.forEach(({ ds, slot }) => {
       if (count >= 6) return;
       sch["kasai"][ds][slot].working = true;
       count++;
@@ -643,11 +659,10 @@ function generate(year: number, month: number): Schedule {
     }
   });
 
-  // Step 5: 火曜午後以外の各スロットにレジを1名割り当て（均等ローテーション）
-  // 対象: matsunaga/kinoshita/ohama/taniguchi/watanabe/hattori/sugimoto の中で
-  // その枠に「受付」として稼働中のスタッフを順番に選ぶ
+  // Step 5: 火曜午後以外の各スロットにレジを1名割り当て（割り当て回数最小優先）
   const REJI_ELIGIBLE = ["matsunaga", "kinoshita", "ohama", "taniguchi", "watanabe", "hattori", "sugimoto"];
-  let rejiIdx = 0;
+  const rejiCounts: Record<string, number> = {};
+  REJI_ELIGIBLE.forEach((id) => { rejiCounts[id] = 0; });
   dates.forEach((ds) => {
     if (!isWorkDay(ds)) return;
     const dow = new Date(ds).getDay();
@@ -655,15 +670,16 @@ function generate(year: number, month: number): Schedule {
     slots.forEach((slot) => {
       // 火曜日午後はスキップ
       if (dow === 2 && slot === "pm") return;
-      // 対象7名の中で、この枠に「受付」として稼働中の人を探してローテーション
-      for (let i = 0; i < REJI_ELIGIBLE.length; i++) {
-        const id = REJI_ELIGIBLE[(rejiIdx + i) % REJI_ELIGIBLE.length];
-        const cell = sch[id]?.[ds]?.[slot];
-        if (cell?.working && cell.role === "受付") {
-          setRole(sch, id, ds, slot, "レジ");
-          rejiIdx++;
-          break;
-        }
+      // 受付中の対象者をレジ割り当て回数が少ない順に並べ、先頭を選ぶ
+      const candidates = REJI_ELIGIBLE
+        .filter((id) => {
+          const cell = sch[id]?.[ds]?.[slot];
+          return cell?.working && cell.role === "受付";
+        })
+        .sort((a, b) => rejiCounts[a] - rejiCounts[b]);
+      if (candidates.length > 0) {
+        setRole(sch, candidates[0], ds, slot, "レジ");
+        rejiCounts[candidates[0]]++;
       }
     });
   });
