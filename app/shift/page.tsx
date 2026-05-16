@@ -594,16 +594,24 @@ function generate(year: number, month: number): Schedule {
   Object.values(weekSlots).forEach((slots) => {
     // 笠井: 火曜日午後は固定休みなので除外
     const kasaiSlots = slots.filter(({ ds, slot }) => !(new Date(ds).getDay() === 2 && slot === "pm"));
-    const ams = kasaiSlots.filter((x) => x.slot === "am");
-    const pms = kasaiSlots.filter((x) => x.slot === "pm");
-    // 午前・午後を均等にするためPM優先でインターリーブ
+    let count = 0;
+
+    // 木曜日は午前・午後ともに必ず出勤
+    kasaiSlots.filter(({ ds }) => new Date(ds).getDay() === 4).forEach(({ ds, slot }) => {
+      sch["kasai"][ds][slot].working = true;
+      count++;
+    });
+
+    // 残り枠を木曜以外のスロットからPM優先インターリーブで補充
+    const rest = kasaiSlots.filter(({ ds }) => new Date(ds).getDay() !== 4);
+    const ams = rest.filter((x) => x.slot === "am");
+    const pms = rest.filter((x) => x.slot === "pm");
     const interleaved: Array<{ ds: string; slot: Slot }> = [];
     const maxLen = Math.max(ams.length, pms.length);
     for (let i = 0; i < maxLen; i++) {
       if (i < pms.length) interleaved.push(pms[i]);
       if (i < ams.length) interleaved.push(ams[i]);
     }
-    let count = 0;
     interleaved.forEach(({ ds, slot }) => {
       if (count >= 6) return;
       sch["kasai"][ds][slot].working = true;
