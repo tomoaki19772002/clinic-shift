@@ -591,6 +591,7 @@ function generate(year: number, month: number): Schedule {
     if (dow !== 6) weekSlots[wk].push({ ds, slot: "pm" });
   });
 
+  let kasaiWeekIdx = 0;
   Object.values(weekSlots).forEach((slots) => {
     // 笠井: 火曜日午後は固定休みなので除外
     const kasaiSlots = slots.filter(({ ds, slot }) => !(new Date(ds).getDay() === 2 && slot === "pm"));
@@ -602,21 +603,32 @@ function generate(year: number, month: number): Schedule {
       count++;
     });
 
-    // 残り枠を木曜以外のスロットからPM優先インターリーブで補充
+    // 残り枠: 日付ごとにグループ化し、週ごとに開始曜日をずらしてランダム性を付与
+    // 各日内はPM→AMの順で入れてAM/PMバランスを保つ
     const rest = kasaiSlots.filter(({ ds }) => new Date(ds).getDay() !== 4);
-    const ams = rest.filter((x) => x.slot === "am");
-    const pms = rest.filter((x) => x.slot === "pm");
+    const byDate: Record<string, Array<{ ds: string; slot: Slot }>> = {};
+    rest.forEach(({ ds, slot }) => {
+      if (!byDate[ds]) byDate[ds] = [];
+      byDate[ds].push({ ds, slot });
+    });
+    const days = Object.keys(byDate).sort();
+    const startIdx = kasaiWeekIdx % Math.max(days.length, 1);
+    const rotatedDays = [...days.slice(startIdx), ...days.slice(0, startIdx)];
+
     const interleaved: Array<{ ds: string; slot: Slot }> = [];
-    const maxLen = Math.max(ams.length, pms.length);
-    for (let i = 0; i < maxLen; i++) {
-      if (i < pms.length) interleaved.push(pms[i]);
-      if (i < ams.length) interleaved.push(ams[i]);
-    }
+    rotatedDays.forEach((d) => {
+      const pms = byDate[d].filter((x) => x.slot === "pm");
+      const ams = byDate[d].filter((x) => x.slot === "am");
+      interleaved.push(...pms, ...ams);
+    });
+
     interleaved.forEach(({ ds, slot }) => {
       if (count >= 6) return;
       sch["kasai"][ds][slot].working = true;
       count++;
     });
+
+    kasaiWeekIdx++;
   });
 
   // Step 2.5: 常勤スタッフに週1枠の休みを付与
