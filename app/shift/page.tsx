@@ -737,12 +737,6 @@ function generate(year: number, month: number): Schedule {
     if (!isWorkDay(ds)) return;
     const dow = new Date(ds).getDay();
 
-    // 杉本: 火・木午前は検査固定
-    if ((dow === 2 || dow === 4) && sch["sugimoto"]?.[ds]?.am?.working) {
-      setRole(sch, "sugimoto", ds, "am", "検査");
-      sch["sugimoto"][ds]["am"].fixed = true;
-    }
-
     // 杉本: 午後に受付が割り当てられている場合は検査に変換（受付業務なし）
     if (sch["sugimoto"]?.[ds]?.pm?.working && sch["sugimoto"]?.[ds]?.pm?.role === "受付") {
       setRole(sch, "sugimoto", ds, "pm", "検査");
