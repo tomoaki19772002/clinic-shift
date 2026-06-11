@@ -453,12 +453,12 @@ function assignSurgery(sch: Schedule, ds: string, slot: Slot, working: StaffDef[
     if (s) { setRole(sch, s.id, ds, slot, "手術補助"); used.add(s.id); surgGot++; }
   }
 
-  // ⑤ シュライバー①: 木午後のみ1人 (火午後は0人でよい)
+  // ⑤ シュライバー②: 木午後のみ1人 (火午後は0人でよい)
   if (!isTuePM) {
     const schOrder = ["taniguchi", "matsunaga", "kinoshita", "ohama"];
     for (const id of schOrder) {
       const s = working.find((x) => x.id === id && !used.has(x.id));
-      if (s) { setRole(sch, s.id, ds, slot, "シュライバー①"); used.add(s.id); break; }
+      if (s) { setRole(sch, s.id, ds, slot, "シュライバー②"); used.add(s.id); break; }
     }
   }
 
@@ -694,7 +694,7 @@ function generate(year: number, month: number): Schedule {
       if (dow === 6) return false;                         // 土曜(oneSchr)
       if (dow === 2 && slot === "am") return false;        // 火AM(oneSchr)
       if (dow === 2 && slot === "pm") return false;        // 火PM(手術)
-      if (dow === 4 && slot === "pm") return false;        // 木PM(手術①のみ)
+      if (dow === 4 && slot === "pm") return false;        // 木PM(手術②のみ)
       return true;
     };
 
@@ -864,9 +864,9 @@ function validate(sch: Schedule, dates: string[]): Warning[] {
         const surg = working.filter((s) => roleOf(s.id) === "手術補助");
         if (surg.length < 2) warns.push({ ds, slot, msg: `手術補助${surg.length}人（2人必要）` });
 
-        // 火午後はシュライバー0人でOK、木午後はシュライバー①1人以上必要
-        const schr1 = working.filter((s) => roleOf(s.id) === "シュライバー①");
-        if (!isTuePM && schr1.length < 1) warns.push({ ds, slot, msg: "シュライバー①0人（1人必要）" });
+        // 火午後はシュライバー0人でOK、木午後はシュライバー②1人以上必要
+        const schr2 = working.filter((s) => roleOf(s.id) === "シュライバー②");
+        if (!isTuePM && schr2.length < 1) warns.push({ ds, slot, msg: "シュライバー②0人（1人必要）" });
 
         const rec = working.filter((s) => roleOf(s.id) === "受付");
         // 受付は最低2人（レジは別途1名）
