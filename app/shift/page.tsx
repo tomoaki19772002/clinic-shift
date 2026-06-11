@@ -178,7 +178,7 @@ const STAFF: StaffDef[] = [
   // ⑧ 医療事務6
   {
     id: "sugimoto", name: "杉本", type: "medical6", group: "⑧医療事務6",
-    fulltime: true, skills: ["受付", "検査", "手術補助"], canWash: false,
+    fulltime: true, skills: ["検査", "手術補助"], canWash: false,
   },
 ];
 
@@ -463,7 +463,7 @@ function assignSurgery(sch: Schedule, ds: string, slot: Slot, working: StaffDef[
   }
 
   // ⑥ 受付: minRec人以上 (火午後=2, 木午後=3)
-  const recOrder = ["watanabe", "hattori", "kasai", "sugimoto", "taniguchi", "matsunaga", "kinoshita", "ohama"];
+  const recOrder = ["watanabe", "hattori", "kasai", "taniguchi", "matsunaga", "kinoshita", "ohama"];
   let recGot = 0;
   for (const id of recOrder) {
     if (recGot >= minRec) break;
@@ -649,14 +649,97 @@ function generate(year: number, month: number): Schedule {
     void isSurgeryAM; // suppress unused warning
   });
 
+  // Step 3.5: シュライバー週次上限（谷口・木下・松永・大濱は最大5枠/週）
+  {
+    const SCHR_CAP_IDS: Record<string, number> = { taniguchi: 5, matsunaga: 5, kinoshita: 5, ohama: 5 };
+    const isSchrRole = (r: string) => r === "シュライバー①" || r === "シュライバー②";
+
+    const wkDatesMap: Record<string, string[]> = {};
+    dates.forEach((ds) => {
+      if (!isWorkDay(ds)) return;
+      const wk = weekKey(new Date(ds));
+      if (!wkDatesMap[wk]) wkDatesMap[wk] = [];
+      wkDatesMap[wk].push(ds);
+    });
+
+    Object.values(wkDatesMap).forEach((wkDates) => {
+      Object.entries(SCHR_CAP_IDS).forEach(([id, cap]) => {
+        const schrSlots: Array<{ ds: string; slot: Slot }> = [];
+        wkDates.forEach((ds) => {
+          const dow = new Date(ds).getDay();
+          const slots: Slot[] = dow === 6 ? ["am"] : ["am", "pm"];
+          slots.forEach((slot) => {
+            const cell = sch[id]?.[ds]?.[slot];
+            if (cell?.working && isSchrRole(cell.role) && !cell.fixed) {
+              schrSlots.push({ ds, slot });
+            }
+          });
+        });
+        // 上限超過分を受付に変換
+        if (schrSlots.length > cap) {
+          schrSlots.slice(cap).forEach(({ ds, slot }) => {
+            setRole(sch, id, ds, slot, "受付");
+          });
+        }
+      });
+    });
+  }
+
+  // Step 3.6: シュライバー①②均等化（松永・木下・大濱・谷口）
+  {
+    const EQUALIZE_IDS = ["matsunaga", "kinoshita", "ohama", "taniguchi"];
+    // 均等化対象: oneSchrでなく手術でもないスロット
+    const isEqualizableSlot = (ds: string, slot: Slot): boolean => {
+      const dow = new Date(ds).getDay();
+      if (dow === 6) return false;                         // 土曜(oneSchr)
+      if (dow === 2 && slot === "am") return false;        // 火AM(oneSchr)
+      if (dow === 2 && slot === "pm") return false;        // 火PM(手術)
+      if (dow === 4 && slot === "pm") return false;        // 木PM(手術①のみ)
+      return true;
+    };
+
+    EQUALIZE_IDS.forEach((id) => {
+      const s1: Array<{ ds: string; slot: Slot }> = [];
+      const s2: Array<{ ds: string; slot: Slot }> = [];
+
+      dates.forEach((ds) => {
+        if (!isWorkDay(ds)) return;
+        const dow = new Date(ds).getDay();
+        const slots: Slot[] = dow === 6 ? ["am"] : ["am", "pm"];
+        slots.forEach((slot) => {
+          if (!isEqualizableSlot(ds, slot)) return;
+          const cell = sch[id]?.[ds]?.[slot];
+          if (!cell?.working || cell.fixed) return;
+          if (cell.role === "シュライバー①") s1.push({ ds, slot });
+          if (cell.role === "シュライバー②") s2.push({ ds, slot });
+        });
+      });
+
+      // ①が多い場合: 後ろから②に変換
+      while (s1.length > s2.length + 1) {
+        const entry = s1.pop();
+        if (!entry) break;
+        setRole(sch, id, entry.ds, entry.slot, "シュライバー②");
+        s2.push(entry);
+      }
+      // ②が多い場合: 後ろから①に変換
+      while (s2.length > s1.length + 1) {
+        const entry = s2.pop();
+        if (!entry) break;
+        setRole(sch, id, entry.ds, entry.slot, "シュライバー①");
+        s1.push(entry);
+      }
+    });
+  }
+
   // Step 4: 固定役割の上書き（ロールアサイン後に適用）
   dates.forEach((ds) => {
     if (!isWorkDay(ds)) return;
     const dow = new Date(ds).getDay();
 
-    // 杉本: 火・木午前は受付固定
+    // 杉本: 火・木午前は検査固定
     if ((dow === 2 || dow === 4) && sch["sugimoto"]?.[ds]?.am?.working) {
-      setRole(sch, "sugimoto", ds, "am", "受付");
+      setRole(sch, "sugimoto", ds, "am", "検査");
       sch["sugimoto"][ds]["am"].fixed = true;
     }
 
@@ -667,30 +750,73 @@ function generate(year: number, month: number): Schedule {
     }
   });
 
-  // Step 5: 火曜午後以外の各スロットにレジを1名割り当て（割り当て回数最小優先）
-  const REJI_ELIGIBLE = ["matsunaga", "kinoshita", "ohama", "taniguchi", "watanabe", "hattori", "sugimoto"];
-  const rejiCounts: Record<string, number> = {};
-  REJI_ELIGIBLE.forEach((id) => { rejiCounts[id] = 0; });
-  dates.forEach((ds) => {
-    if (!isWorkDay(ds)) return;
-    const dow = new Date(ds).getDay();
-    const slots: Slot[] = dow === 6 ? ["am"] : ["am", "pm"];
-    slots.forEach((slot) => {
-      // 火曜日午後はスキップ
-      if (dow === 2 && slot === "pm") return;
-      // 受付中の対象者をレジ割り当て回数が少ない順に並べ、先頭を選ぶ
-      const candidates = REJI_ELIGIBLE
-        .filter((id) => {
+  // Step 5: レジ配分（月水木金PM・火土AMのみ、渡邉・服部は週2枠優先、他は均等配分）
+  {
+    // レジ対象スロット: 月水木金PM + 火土AM
+    const isRejiTargetSlot = (ds: string, slot: Slot): boolean => {
+      const dow = new Date(ds).getDay();
+      if (slot === "pm") return [1, 3, 4, 5].includes(dow);
+      if (slot === "am") return dow === 2 || dow === 6;
+      return false;
+    };
+
+    const REJI_PRIORITY = ["watanabe", "hattori"]; // 週2枠優先
+    const REJI_OTHERS   = ["matsunaga", "kinoshita", "ohama", "taniguchi"]; // 均等配分
+    const REJI_ALL      = [...REJI_PRIORITY, ...REJI_OTHERS];
+    const rejiCounts: Record<string, number> = {};
+    REJI_ALL.forEach((id) => { rejiCounts[id] = 0; });
+
+    // 週ごとのターゲットスロットを収集
+    const weekTargetSlots: Record<string, Array<{ ds: string; slot: Slot }>> = {};
+    dates.forEach((ds) => {
+      if (!isWorkDay(ds)) return;
+      const wk = weekKey(new Date(ds));
+      if (!weekTargetSlots[wk]) weekTargetSlots[wk] = [];
+      const dow = new Date(ds).getDay();
+      const slots: Slot[] = dow === 6 ? ["am"] : ["am", "pm"];
+      slots.forEach((slot) => {
+        if (isRejiTargetSlot(ds, slot)) weekTargetSlots[wk].push({ ds, slot });
+      });
+    });
+
+    Object.values(weekTargetSlots).forEach((targetSlots) => {
+      const assignedSlots = new Set<string>();
+
+      // 1. 渡邉・服部それぞれ週2枠（対象スロットで受付の枠から優先割り当て）
+      REJI_PRIORITY.forEach((id) => {
+        let count = 0;
+        for (const { ds, slot } of targetSlots) {
+          if (count >= 2) break;
+          const key = `${ds}-${slot}`;
+          if (assignedSlots.has(key)) continue;
           const cell = sch[id]?.[ds]?.[slot];
-          return cell?.working && cell.role === "受付";
-        })
-        .sort((a, b) => rejiCounts[a] - rejiCounts[b]);
-      if (candidates.length > 0) {
-        setRole(sch, candidates[0], ds, slot, "レジ");
-        rejiCounts[candidates[0]]++;
+          if (cell?.working && cell.role === "受付") {
+            setRole(sch, id, ds, slot, "レジ");
+            rejiCounts[id]++;
+            assignedSlots.add(key);
+            count++;
+          }
+        }
+      });
+
+      // 2. 残り対象スロットをOTHERSに均等配分（グローバル最小カウント優先）
+      for (const { ds, slot } of targetSlots) {
+        const key = `${ds}-${slot}`;
+        if (assignedSlots.has(key)) continue;
+        const candidates = REJI_OTHERS
+          .filter((id) => {
+            const cell = sch[id]?.[ds]?.[slot];
+            return cell?.working && cell.role === "受付";
+          })
+          .sort((a, b) => rejiCounts[a] - rejiCounts[b]);
+        if (candidates.length > 0) {
+          setRole(sch, candidates[0], ds, slot, "レジ");
+          rejiCounts[candidates[0]]++;
+          assignedSlots.add(key);
+        }
       }
     });
-  });
+  }
 
   return sch;
 }
@@ -1095,7 +1221,7 @@ export default function ShiftPage() {
             {/* 役割ボタン */}
             <div className="space-y-1.5">
               {(modalStaff.skills as Role[]).flatMap((role): Role[] =>
-                role === "受付" && ["matsunaga","kinoshita","ohama","taniguchi","watanabe","hattori","sugimoto"].includes(modalStaff.id)
+                role === "受付" && ["matsunaga","kinoshita","ohama","taniguchi","watanabe","hattori"].includes(modalStaff.id)
                   ? ["受付", "レジ"]
                   : [role]
               ).map((role) => (
