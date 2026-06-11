@@ -743,6 +743,11 @@ function generate(year: number, month: number): Schedule {
       sch["sugimoto"][ds]["am"].fixed = true;
     }
 
+    // 杉本: 午後に受付が割り当てられている場合は検査に変換（受付業務なし）
+    if (sch["sugimoto"]?.[ds]?.pm?.working && sch["sugimoto"]?.[ds]?.pm?.role === "受付") {
+      setRole(sch, "sugimoto", ds, "pm", "検査");
+    }
+
     // 駒田: 火曜日午後はレンズ固定
     if (dow === 2 && sch["komada"]?.[ds]?.pm?.working) {
       setRole(sch, "komada", ds, "pm", "レンズ");
