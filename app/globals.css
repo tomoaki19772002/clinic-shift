@@ -8,7 +8,7 @@
 
 /* スタッフ区切り罫線 */
 tr.staff-divider > td {
-  border-top: 2px solid #94a3b8 !important;
+  border-top: 2px solid #000000 !important;
 }
 
 /* 午前・午後の境界線 */
