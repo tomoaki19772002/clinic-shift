@@ -11,6 +11,11 @@ tr.staff-divider > td {
   border-top: 2px solid #94a3b8 !important;
 }
 
+/* 午前・午後の境界線 */
+tr.am-row > td {
+  border-bottom: 1px solid #94a3b8 !important;
+}
+
 /* 日にち毎の縦罫線を太く */
 table td, table th {
   border-right: 2px solid #94a3b8 !important;
@@ -62,8 +67,16 @@ body {
   border-radius: 2px;
 }
 
+/* ===== タイムカード管理画面：印刷時に非表示にする要素 ===== */
+.no-print { display: block; }
+.print-show { display: none; }
+
 /* ===== 印刷スタイル: A4横向き1枚 ===== */
 @media print {
+  /* タイムカード管理画面：ナビ・タブ・フィルターを非表示、印刷ヘッダーを表示 */
+  .no-print { display: none !important; }
+  .print-show { display: block !important; }
+  body { background: white !important; }
   @page {
     size: A4 landscape;
     margin: 4mm;

@@ -1198,24 +1198,15 @@ export default function ShiftPage() {
           </thead>
 
           <tbody>
-            {groups.flatMap(([groupLabel, staffList]) => [
-              // グループヘッダー行
-              <tr key={`g-${groupLabel}`}>
-                <td
-                  colSpan={cols.length + 2}
-                  className="bg-slate-200 text-slate-700 font-bold text-xs px-3 py-0.5 border border-slate-300 sticky left-0 z-10"
-                >
-                  {groupLabel}
-                </td>
-              </tr>,
-              // スタッフ行: 午前・午後で2行ずつ
+            {groups.flatMap(([, staffList]) => [
+              // スタッフ行: 午前・午後で2行ずつ（グループヘッダー行は非表示）
               ...staffList.flatMap((staff: StaffDef) => {
                 const renderCell = (ds: string, slot: Slot, ci: number) => {
                   const dow = new Date(ds).getDay();
                   const hol = HOLIDAYS.has(ds);
                   const work = isWorkDay(ds);
                   if (!work) {
-                    return <td key={ci} className={`border border-slate-200 ${hol || dow === 0 ? "bg-red-50" : "bg-slate-100"}`} />;
+                    return <td key={ci} className={`border border-slate-200 ${hol || dow === 0 ? "bg-black" : "bg-slate-100"}`} />;
                   }
                   if (slot === "pm" && dow === 6) {
                     return <td key={ci} className="border border-slate-200 bg-slate-50" />;
@@ -1242,7 +1233,7 @@ export default function ShiftPage() {
 
                 return [
                   // 午前行
-                  <tr key={`${staff.id}-am`} className="hover:bg-blue-50 staff-divider">
+                  <tr key={`${staff.id}-am`} className="hover:bg-blue-50 staff-divider am-row">
                     <td rowSpan={2} className="sticky left-0 z-10 bg-white border border-slate-200 px-2 py-0.5 font-medium whitespace-nowrap align-middle min-w-[72px]">
                       {staff.name}
                       {!staff.fulltime && <span className="ml-1 text-slate-400 text-xs">P</span>}
