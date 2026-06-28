@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 
 // ============================================================
 // TYPES
@@ -933,6 +933,7 @@ export default function ShiftPage() {
   const [month, setMonth] = useState(5);
   const [sch, setSch]     = useState<Schedule>(() => loadFromStorage(2026, 5) ?? generate(2026, 5));
   const [modal, setModal] = useState<{ staffId: string; ds: string; slot: Slot } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showWarns, setShowWarns] = useState(false);
   const [savedMonths, setSavedMonths] = useState<Set<string>>(() => {
     // 保存済みキー一覧を初期化
@@ -977,6 +978,43 @@ export default function ShiftPage() {
   function handleGenerate() {
     setSch(generate(year, month));
     setShowWarns(false);
+  }
+
+  // JSONファイルとしてエクスポート（USBメモリー等への保存用）
+  function handleExport() {
+    const data = { year, month, schedule: sch };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `shift-${year}-${String(month).padStart(2, "0")}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // JSONファイルをインポート（他端末からの持ち込み用）
+  function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target?.result as string);
+        if (data.schedule && typeof data.year === "number" && typeof data.month === "number") {
+          setYear(data.year);
+          setMonth(data.month);
+          setSch(data.schedule as Schedule);
+          setShowWarns(false);
+          alert(`${data.year}年${data.month}月のシフトを読み込みました。`);
+        } else {
+          alert("シフトデータの形式が正しくありません。");
+        }
+      } catch {
+        alert("ファイルの読み込みに失敗しました。");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
   }
 
   function handleSave() {
@@ -1066,6 +1104,29 @@ export default function ShiftPage() {
         >
           ルール確認 {warns.length > 0 ? `⚠ ${warns.length}件` : "✓"}
         </button>
+
+        <button
+          onClick={handleExport}
+          className="bg-amber-600 hover:bg-amber-500 active:bg-amber-700 px-3 py-1 rounded text-sm font-bold"
+          title="シフトデータをJSONファイルとして保存します"
+        >
+          書出し
+        </button>
+
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          className="bg-purple-600 hover:bg-purple-500 active:bg-purple-700 px-3 py-1 rounded text-sm font-bold"
+          title="保存したJSONファイルを読み込みます"
+        >
+          読込み
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".json"
+          className="hidden"
+          onChange={handleImport}
+        />
 
         <button
           onClick={() => window.print()}
