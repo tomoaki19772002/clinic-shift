@@ -76,23 +76,28 @@ body {
   /* タイムカード管理画面：ナビ・タブ・フィルターを非表示、印刷ヘッダーを表示 */
   .no-print { display: none !important; }
   .print-show { display: block !important; }
-  body { background: white !important; }
+
   @page {
     size: A4 landscape;
-    margin: 4mm;
+    margin: 5mm;
   }
 
   html, body {
     height: auto !important;
     overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
   }
 
-  /* flex レイアウトを解除 */
+  /* flex レイアウトを解除・余白をゼロに */
   body > div,
   .flex.flex-col {
     display: block !important;
     height: auto !important;
     overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   /* テーブルラッパーの overflow・flex を解除 */
@@ -100,26 +105,32 @@ body {
     overflow: visible !important;
     flex: none !important;
     height: auto !important;
-    width: auto !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
-  /* テーブルを自動幅に縮小 */
+  /* テーブルをページ全幅に引き伸ばす */
   table {
     border-collapse: collapse !important;
     table-layout: auto !important;
     min-width: 0 !important;
-    width: auto !important;
+    width: 100% !important;
+    margin: 0 !important;
   }
 
-  /* sticky 解除・文字・余白を極限まで詰める */
+  /* ① sticky の残留オフセットをリセット → 名前の左欠けを修正
+     ② フォント・行間を少し大きく → 縦にA4全体を使いやすくする */
   th, td {
     position: static !important;
+    left: 0 !important;
+    transform: none !important;
     min-width: 0 !important;
     max-width: none !important;
-    padding: 1px 2px !important;
+    padding: 2px 3px !important;
     white-space: nowrap;
-    font-size: 7px !important;
-    line-height: 1.3 !important;
+    font-size: 8px !important;
+    line-height: 1.5 !important;
   }
 
   /* 背景色を印刷に反映 */
