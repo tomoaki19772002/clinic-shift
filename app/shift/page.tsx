@@ -1442,54 +1442,73 @@ export default function ShiftPage() {
               }),
             ])}
 
-            {/* ── 集計行 ── */}
-            {(["am", "pm"] as Slot[]).map((slot) => {
-              const label = slot === "am" ? "受付人数（午前）" : "受付人数（午後）";
-              return (
-                <tr key={`sum-rec-${slot}`} className={slot === "am" ? "am-row staff-divider" : ""}>
-                  <td className="sticky left-0 z-10 bg-slate-100 border border-slate-300 px-2 py-0.5 text-[10px] font-bold whitespace-nowrap text-slate-700">
-                    {label}
+            {/* ── 集計行: 受付人数（受付+レジ）── */}
+            <tr key="sum-rec-am" className="staff-divider am-row">
+              <td rowSpan={2} className="sticky left-0 z-10 bg-slate-100 border border-slate-300 px-2 py-0.5 text-[10px] font-bold whitespace-nowrap align-middle text-slate-700 min-w-[72px]">
+                受付人数
+              </td>
+              {cols.map(({ ds }) => {
+                if (!isWorkDay(ds)) return <td key={ds} className="bg-black border border-slate-300" />;
+                const count = STAFF.filter((s) => {
+                  const cell = sch[s.id]?.[ds]?.am;
+                  return cell?.working === true && (cell.role === "受付" || cell.role === "レジ");
+                }).length;
+                return (
+                  <td key={ds} className="text-center text-[11px] font-bold border border-slate-300 bg-slate-100 text-slate-800">
+                    {count || ""}
                   </td>
-                  {cols.map(({ ds }) => {
-                    if (!isWorkDay(ds)) return <td key={ds} className="bg-black border border-slate-300" />;
-                    if (slot === "pm" && !hasPM(ds)) return <td key={ds} className="bg-slate-50 border border-slate-300" />;
-                    const count = STAFF.filter(
-                      (s) => sch[s.id]?.[ds]?.[slot]?.working &&
-                             (sch[s.id][ds][slot].role === "受付" || sch[s.id][ds][slot].role === "レジ")
-                    ).length;
-                    return (
-                      <td key={ds} className="text-center text-[11px] font-bold border border-slate-300 bg-slate-100 text-slate-800">
-                        {count > 0 ? count : ""}
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
+                );
+              })}
+            </tr>
+            <tr key="sum-rec-pm">
+              {cols.map(({ ds }) => {
+                if (!isWorkDay(ds)) return <td key={ds} className="bg-black border border-slate-300" />;
+                if (!hasPM(ds)) return <td key={ds} className="bg-slate-200 border border-slate-300" />;
+                const count = STAFF.filter((s) => {
+                  const cell = sch[s.id]?.[ds]?.pm;
+                  return cell?.working === true && (cell.role === "受付" || cell.role === "レジ");
+                }).length;
+                return (
+                  <td key={ds} className="text-center text-[11px] font-bold border border-slate-300 bg-slate-100 text-slate-800">
+                    {count || ""}
+                  </td>
+                );
+              })}
+            </tr>
 
-            {(["am", "pm"] as Slot[]).map((slot) => {
-              const label = slot === "am" ? "検査人数（午前）" : "検査人数（午後）";
-              return (
-                <tr key={`sum-ken-${slot}`} className={slot === "am" ? "am-row" : ""}>
-                  <td className="sticky left-0 z-10 bg-teal-50 border border-slate-300 px-2 py-0.5 text-[10px] font-bold whitespace-nowrap text-teal-800">
-                    {label}
+            {/* ── 集計行: 検査人数 ── */}
+            <tr key="sum-ken-am" className="staff-divider am-row">
+              <td rowSpan={2} className="sticky left-0 z-10 bg-teal-50 border border-slate-300 px-2 py-0.5 text-[10px] font-bold whitespace-nowrap align-middle text-teal-800 min-w-[72px]">
+                検査人数
+              </td>
+              {cols.map(({ ds }) => {
+                if (!isWorkDay(ds)) return <td key={ds} className="bg-black border border-slate-300" />;
+                const count = STAFF.filter((s) => {
+                  const cell = sch[s.id]?.[ds]?.am;
+                  return cell?.working === true && cell.role === "検査";
+                }).length;
+                return (
+                  <td key={ds} className="text-center text-[11px] font-bold border border-slate-300 bg-teal-50 text-teal-800">
+                    {count || ""}
                   </td>
-                  {cols.map(({ ds }) => {
-                    if (!isWorkDay(ds)) return <td key={ds} className="bg-black border border-slate-300" />;
-                    if (slot === "pm" && !hasPM(ds)) return <td key={ds} className="bg-slate-50 border border-slate-300" />;
-                    const count = STAFF.filter(
-                      (s) => sch[s.id]?.[ds]?.[slot]?.working &&
-                             sch[s.id][ds][slot].role === "検査"
-                    ).length;
-                    return (
-                      <td key={ds} className="text-center text-[11px] font-bold border border-slate-300 bg-teal-50 text-teal-800">
-                        {count > 0 ? count : ""}
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
+                );
+              })}
+            </tr>
+            <tr key="sum-ken-pm">
+              {cols.map(({ ds }) => {
+                if (!isWorkDay(ds)) return <td key={ds} className="bg-black border border-slate-300" />;
+                if (!hasPM(ds)) return <td key={ds} className="bg-teal-100 border border-slate-300" />;
+                const count = STAFF.filter((s) => {
+                  const cell = sch[s.id]?.[ds]?.pm;
+                  return cell?.working === true && cell.role === "検査";
+                }).length;
+                return (
+                  <td key={ds} className="text-center text-[11px] font-bold border border-slate-300 bg-teal-50 text-teal-800">
+                    {count || ""}
+                  </td>
+                );
+              })}
+            </tr>
           </tbody>
         </table>
       </div>
