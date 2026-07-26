@@ -1447,6 +1447,9 @@ export default function ShiftPage() {
               <td rowSpan={2} className="sticky left-0 z-10 bg-slate-100 border border-slate-300 px-2 py-0.5 text-[10px] font-bold whitespace-nowrap align-middle text-slate-700 min-w-[72px]">
                 受付人数
               </td>
+              <td className="sticky left-[73px] z-10 bg-slate-50 border border-slate-300 px-1 text-center text-xs font-semibold text-slate-600 whitespace-nowrap select-none">
+                午前
+              </td>
               {cols.map(({ ds }) => {
                 if (!isWorkDay(ds)) return <td key={ds} className="bg-black border border-slate-300" />;
                 const count = STAFF.filter((s) => {
@@ -1461,6 +1464,9 @@ export default function ShiftPage() {
               })}
             </tr>
             <tr key="sum-rec-pm">
+              <td className="sticky left-[73px] z-10 bg-slate-100 border border-slate-300 px-1 text-center text-xs font-semibold text-slate-500 whitespace-nowrap select-none">
+                午後
+              </td>
               {cols.map(({ ds }) => {
                 if (!isWorkDay(ds)) return <td key={ds} className="bg-black border border-slate-300" />;
                 if (!hasPM(ds)) return <td key={ds} className="bg-slate-200 border border-slate-300" />;
@@ -1481,6 +1487,9 @@ export default function ShiftPage() {
               <td rowSpan={2} className="sticky left-0 z-10 bg-teal-50 border border-slate-300 px-2 py-0.5 text-[10px] font-bold whitespace-nowrap align-middle text-teal-800 min-w-[72px]">
                 検査人数
               </td>
+              <td className="sticky left-[73px] z-10 bg-teal-50 border border-slate-300 px-1 text-center text-xs font-semibold text-teal-700 whitespace-nowrap select-none">
+                午前
+              </td>
               {cols.map(({ ds }) => {
                 if (!isWorkDay(ds)) return <td key={ds} className="bg-black border border-slate-300" />;
                 const count = STAFF.filter((s) => {
@@ -1495,6 +1504,9 @@ export default function ShiftPage() {
               })}
             </tr>
             <tr key="sum-ken-pm">
+              <td className="sticky left-[73px] z-10 bg-teal-100 border border-slate-300 px-1 text-center text-xs font-semibold text-teal-600 whitespace-nowrap select-none">
+                午後
+              </td>
               {cols.map(({ ds }) => {
                 if (!isWorkDay(ds)) return <td key={ds} className="bg-black border border-slate-300" />;
                 if (!hasPM(ds)) return <td key={ds} className="bg-teal-100 border border-slate-300" />;
