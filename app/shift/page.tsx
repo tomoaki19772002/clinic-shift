@@ -510,11 +510,15 @@ function assignWeeklyOff(sch: Schedule, dates: string[]) {
   let weekIdx = 0;
   weekMap.forEach((slots) => {
     fulltimeStaff.forEach((s, staffIdx) => {
+      // その週にすでに休み（希望休みなど）があれば週1休みを追加しない
+      // 希望休みがある週はそれが「週の休み」として機能する
+      const hasOffThisWeek = slots.some(({ ds, slot }) => sch[s.id]?.[ds]?.[slot]?.working === false);
+      if (hasOffThisWeek) return;
+
       let candidates = slots;
 
       if (s.id === "murata") {
         // 村田: 平野が出勤 かつ 火・木午後でない枠のみ休み可
-        // 火・木午後は手術固定のため休み不可
         candidates = slots.filter(({ ds, slot }) => {
           const dow = new Date(ds).getDay();
           if ((dow === 2 || dow === 4) && slot === "pm") return false;
@@ -529,9 +533,6 @@ function assignWeeklyOff(sch: Schedule, dates: string[]) {
 
       if (candidates.length === 0) return;
 
-      // (staffIdx + weekIdx) % 候補数 で決定論的に1枠を選択
-      // staffIdx をそのまま使うことで、同じ週に複数スタッフが同一スロットに集中しない
-      // ※ staffIdx * 3 は candidates.length=3 のとき常に0になるためNG
       const idx = (staffIdx + weekIdx) % candidates.length;
       const { ds, slot } = candidates[idx];
       sch[s.id][ds][slot] = { working: false, role: "休" };
@@ -632,10 +633,7 @@ function generate(year: number, month: number, prefOff: PrefOff = {}): Schedule 
     kasaiWeekIdx++;
   });
 
-  // Step 2.5: 常勤スタッフに週1枠の休みを付与
-  assignWeeklyOff(sch, dates);
-
-  // Step 2.8: 希望休みを適用（他の制約より優先）
+  // Step 2.5: 希望休みを先に確定（週1休み付与の前に適用することで重複を防ぐ）
   Object.entries(prefOff).forEach(([staffId, offSlots]) => {
     offSlots.forEach(({ ds, slot }) => {
       if (sch[staffId]?.[ds]) {
@@ -643,6 +641,10 @@ function generate(year: number, month: number, prefOff: PrefOff = {}): Schedule 
       }
     });
   });
+
+  // Step 2.6: 常勤スタッフに週1枠の休みを付与
+  // 希望休みで既に休みがある週はスキップ → 希望休み = その週の週1休みとして機能
+  assignWeeklyOff(sch, dates);
 
   // Step 3: 役割を割り当て
   dates.forEach((ds) => {
