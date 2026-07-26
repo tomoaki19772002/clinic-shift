@@ -1441,6 +1441,55 @@ export default function ShiftPage() {
                 ];
               }),
             ])}
+
+            {/* ── 集計行 ── */}
+            {(["am", "pm"] as Slot[]).map((slot) => {
+              const label = slot === "am" ? "受付人数（午前）" : "受付人数（午後）";
+              return (
+                <tr key={`sum-rec-${slot}`} className={slot === "am" ? "am-row staff-divider" : ""}>
+                  <td className="sticky left-0 z-10 bg-slate-100 border border-slate-300 px-2 py-0.5 text-[10px] font-bold whitespace-nowrap text-slate-700">
+                    {label}
+                  </td>
+                  {cols.map(({ ds }) => {
+                    if (!isWorkDay(ds)) return <td key={ds} className="bg-black border border-slate-300" />;
+                    if (slot === "pm" && !hasPM(ds)) return <td key={ds} className="bg-slate-50 border border-slate-300" />;
+                    const count = STAFF.filter(
+                      (s) => sch[s.id]?.[ds]?.[slot]?.working &&
+                             (sch[s.id][ds][slot].role === "受付" || sch[s.id][ds][slot].role === "レジ")
+                    ).length;
+                    return (
+                      <td key={ds} className="text-center text-[11px] font-bold border border-slate-300 bg-slate-100 text-slate-800">
+                        {count > 0 ? count : ""}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+
+            {(["am", "pm"] as Slot[]).map((slot) => {
+              const label = slot === "am" ? "検査人数（午前）" : "検査人数（午後）";
+              return (
+                <tr key={`sum-ken-${slot}`} className={slot === "am" ? "am-row" : ""}>
+                  <td className="sticky left-0 z-10 bg-teal-50 border border-slate-300 px-2 py-0.5 text-[10px] font-bold whitespace-nowrap text-teal-800">
+                    {label}
+                  </td>
+                  {cols.map(({ ds }) => {
+                    if (!isWorkDay(ds)) return <td key={ds} className="bg-black border border-slate-300" />;
+                    if (slot === "pm" && !hasPM(ds)) return <td key={ds} className="bg-slate-50 border border-slate-300" />;
+                    const count = STAFF.filter(
+                      (s) => sch[s.id]?.[ds]?.[slot]?.working &&
+                             sch[s.id][ds][slot].role === "検査"
+                    ).length;
+                    return (
+                      <td key={ds} className="text-center text-[11px] font-bold border border-slate-300 bg-teal-50 text-teal-800">
+                        {count > 0 ? count : ""}
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
