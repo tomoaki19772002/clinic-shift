@@ -1456,8 +1456,9 @@ export default function ShiftPage() {
                   const cell = sch[s.id]?.[ds]?.am;
                   return cell?.working === true && (cell.role === "受付" || cell.role === "レジ");
                 }).length;
+                const hl = count <= 2 ? "bg-orange-200 text-orange-900" : "bg-slate-100 text-slate-800";
                 return (
-                  <td key={ds} className="text-center text-[11px] font-bold border border-slate-300 bg-slate-100 text-slate-800">
+                  <td key={ds} className={`text-center text-[11px] font-bold border border-slate-300 ${hl}`}>
                     {count || ""}
                   </td>
                 );
@@ -1474,8 +1475,9 @@ export default function ShiftPage() {
                   const cell = sch[s.id]?.[ds]?.pm;
                   return cell?.working === true && (cell.role === "受付" || cell.role === "レジ");
                 }).length;
+                const hl = count <= 2 ? "bg-orange-200 text-orange-900" : "bg-slate-100 text-slate-800";
                 return (
-                  <td key={ds} className="text-center text-[11px] font-bold border border-slate-300 bg-slate-100 text-slate-800">
+                  <td key={ds} className={`text-center text-[11px] font-bold border border-slate-300 ${hl}`}>
                     {count || ""}
                   </td>
                 );
@@ -1496,8 +1498,9 @@ export default function ShiftPage() {
                   const cell = sch[s.id]?.[ds]?.am;
                   return cell?.working === true && cell.role === "検査";
                 }).length;
+                const hl = count <= 2 ? "bg-red-200 text-red-900" : "bg-teal-50 text-teal-800";
                 return (
-                  <td key={ds} className="text-center text-[11px] font-bold border border-slate-300 bg-teal-50 text-teal-800">
+                  <td key={ds} className={`text-center text-[11px] font-bold border border-slate-300 ${hl}`}>
                     {count || ""}
                   </td>
                 );
@@ -1514,8 +1517,9 @@ export default function ShiftPage() {
                   const cell = sch[s.id]?.[ds]?.pm;
                   return cell?.working === true && cell.role === "検査";
                 }).length;
+                const hl = count <= 2 ? "bg-red-200 text-red-900" : "bg-teal-50 text-teal-800";
                 return (
-                  <td key={ds} className="text-center text-[11px] font-bold border border-slate-300 bg-teal-50 text-teal-800">
+                  <td key={ds} className={`text-center text-[11px] font-bold border border-slate-300 ${hl}`}>
                     {count || ""}
                   </td>
                 );
