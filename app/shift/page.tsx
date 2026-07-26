@@ -51,6 +51,7 @@ interface Cell {
 
 type DaySch = { am: Cell; pm: Cell };
 type Schedule = Record<string, Record<string, DaySch>>; // staffId -> dateStr -> DaySch
+type PrefOff = Record<string, Array<{ ds: string; slot: Slot }>>; // 希望休み: staffId -> [{date, slot}]
 
 // ============================================================
 // CONSTANTS
@@ -542,7 +543,7 @@ function assignWeeklyOff(sch: Schedule, dates: string[]) {
 // ============================================================
 // MAIN GENERATOR
 // ============================================================
-function generate(year: number, month: number): Schedule {
+function generate(year: number, month: number, prefOff: PrefOff = {}): Schedule {
   const sch: Schedule = {};
   STAFF.forEach((s) => { sch[s.id] = {}; });
   const dates = getRange(year, month);
@@ -633,6 +634,15 @@ function generate(year: number, month: number): Schedule {
 
   // Step 2.5: 常勤スタッフに週1枠の休みを付与
   assignWeeklyOff(sch, dates);
+
+  // Step 2.8: 希望休みを適用（他の制約より優先）
+  Object.entries(prefOff).forEach(([staffId, offSlots]) => {
+    offSlots.forEach(({ ds, slot }) => {
+      if (sch[staffId]?.[ds]) {
+        sch[staffId][ds][slot] = { working: false, role: "休" };
+      }
+    });
+  });
 
   // Step 3: 役割を割り当て
   dates.forEach((ds) => {
@@ -933,6 +943,8 @@ export default function ShiftPage() {
   const [month, setMonth] = useState(5);
   const [sch, setSch]     = useState<Schedule>(() => loadFromStorage(2026, 5) ?? generate(2026, 5));
   const [modal, setModal] = useState<{ staffId: string; ds: string; slot: Slot } | null>(null);
+  const [prefOff, setPrefOff] = useState<PrefOff>({});
+  const [prefMode, setPrefMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showWarns, setShowWarns] = useState(false);
   const [savedMonths, setSavedMonths] = useState<Set<string>>(() => {
@@ -980,9 +992,43 @@ export default function ShiftPage() {
     setShowWarns(false);
   }
 
+  // ③ 希望休みを反映してシフト再編成
+  function handlePrefRegenerate() {
+    setSch(generate(year, month, prefOff));
+    setShowWarns(false);
+    setPrefMode(false);
+  }
+
+  // 希望休みのオン/オフ切り替え
+  function togglePrefOff(staffId: string, ds: string, slot: Slot) {
+    if (!isWorkDay(ds)) return;
+    if (new Date(ds).getDay() === 6 && slot === "pm") return;
+    setPrefOff((prev) => {
+      const current = prev[staffId] ?? [];
+      const idx = current.findIndex((x) => x.ds === ds && x.slot === slot);
+      return {
+        ...prev,
+        [staffId]: idx >= 0
+          ? [...current.slice(0, idx), ...current.slice(idx + 1)]
+          : [...current, { ds, slot }],
+      };
+    });
+  }
+
+  // 希望休みに登録されているか判定
+  function isPrefOff(staffId: string, ds: string, slot: Slot): boolean {
+    return (prefOff[staffId] ?? []).some((x) => x.ds === ds && x.slot === slot);
+  }
+
+  // 希望休みをすべてクリア
+  function clearPrefOff() {
+    setPrefOff({});
+    setPrefMode(false);
+  }
+
   // JSONファイルとしてエクスポート（USBメモリー等への保存用）
   function handleExport() {
-    const data = { year, month, schedule: sch };
+    const data = { year, month, schedule: sch, prefOff };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -1004,6 +1050,7 @@ export default function ShiftPage() {
           setYear(data.year);
           setMonth(data.month);
           setSch(data.schedule as Schedule);
+          if (data.prefOff) setPrefOff(data.prefOff as PrefOff);
           setShowWarns(false);
           alert(`${data.year}年${data.month}月のシフトを読み込みました。`);
         } else {
@@ -1082,7 +1129,25 @@ export default function ShiftPage() {
           onClick={handleGenerate}
           className="bg-blue-500 hover:bg-blue-400 active:bg-blue-600 px-3 py-1 rounded text-sm font-bold"
         >
-          シフト生成
+          ①シフト生成
+        </button>
+
+        <button
+          onClick={() => { setPrefMode((v) => !v); }}
+          className={`px-3 py-1 rounded text-sm font-bold ${
+            prefMode
+              ? "bg-orange-500 hover:bg-orange-400 ring-2 ring-white"
+              : "bg-orange-600 hover:bg-orange-500"
+          }`}
+        >
+          {prefMode ? "希望休み設定中…" : "②希望休み設定"}
+        </button>
+
+        <button
+          onClick={handlePrefRegenerate}
+          className="bg-teal-600 hover:bg-teal-500 active:bg-teal-700 px-3 py-1 rounded text-sm font-bold"
+        >
+          ③再編成
         </button>
 
         <button
@@ -1135,6 +1200,26 @@ export default function ShiftPage() {
           印刷
         </button>
       </header>
+
+      {/* ── 希望休み設定モードバー ── */}
+      {prefMode && (
+        <div className="flex-shrink-0 bg-orange-100 border-b border-orange-300 px-4 py-2 flex items-center gap-3 print:hidden">
+          <span className="text-orange-800 font-bold text-sm">🟠 希望休み設定中</span>
+          <span className="text-orange-700 text-xs">セルをタップ → 希望休みのオン/オフ</span>
+          <button
+            onClick={clearPrefOff}
+            className="ml-auto text-xs bg-white border border-orange-400 text-orange-700 px-2 py-0.5 rounded hover:bg-orange-50"
+          >
+            すべてクリア
+          </button>
+          <button
+            onClick={() => setPrefMode(false)}
+            className="text-xs bg-orange-600 text-white px-3 py-0.5 rounded hover:bg-orange-500"
+          >
+            設定完了
+          </button>
+        </div>
+      )}
 
       {/* ── 警告パネル ── */}
       {showWarns && warns.length > 0 && (
@@ -1211,6 +1296,27 @@ export default function ShiftPage() {
                   if (slot === "pm" && dow === 6) {
                     return <td key={ci} className="border border-slate-200 bg-slate-50" />;
                   }
+
+                  const pref = isPrefOff(staff.id, ds, slot);
+
+                  // 希望休み設定モード: クリックで希望休みをトグル
+                  if (prefMode) {
+                    return (
+                      <td
+                        key={ci}
+                        onClick={() => togglePrefOff(staff.id, ds, slot)}
+                        className={`border border-slate-200 text-center cursor-pointer select-none px-1 py-0.5 relative min-w-[48px] font-bold transition-colors ${
+                          pref
+                            ? "bg-orange-300 text-orange-900"
+                            : "bg-white text-slate-300 hover:bg-orange-50"
+                        }`}
+                        title={`${staff.name} ${ds} ${slot === "am" ? "午前" : "午後"}${pref ? "（希望休み）" : ""}`}
+                      >
+                        {pref ? "希" : ""}
+                      </td>
+                    );
+                  }
+
                   const cell = sch[staff.id]?.[ds]?.[slot];
                   if (!cell) return <td key={ci} className="border border-slate-200 bg-slate-50" />;
                   const cls = cell.working
@@ -1226,6 +1332,10 @@ export default function ShiftPage() {
                       {cell.working ? (ROLE_SHORT[cell.role] ?? cell.role) || "○" : cell.role || "休"}
                       {cell.fixed && cell.working && (
                         <span className="absolute top-0 right-0 text-amber-500 leading-none" style={{ fontSize: "7px" }}>●</span>
+                      )}
+                      {/* 希望休み登録済みのバッジ（通常モード時） */}
+                      {pref && (
+                        <span className="absolute top-0 left-0 text-orange-500 leading-none font-bold" style={{ fontSize: "7px" }}>希</span>
                       )}
                     </td>
                   );
