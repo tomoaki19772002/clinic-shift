@@ -311,6 +311,20 @@ function assignRegular(
       .filter((s) => !used.has(s.id) && s.skills.includes("受付"))
       .slice(0, 3)
       .forEach((s) => { setRole(sch, s.id, ds, slot, "受付"); used.add(s.id); });
+
+    // 土曜検査補完: 視能訓練士が2人未満なら検査スキル持ち医療事務を受付→検査に振り替え
+    const kenNowSat = () => working.filter(
+      (s) => s.type === "orthoptist" || sch[s.id]?.[ds]?.[slot]?.role === "検査"
+    ).length;
+    for (let p = 0; p < 3 && kenNowSat() < 2; p++) {
+      const cand = working.find(
+        (s) => ["medical1", "medical6"].includes(s.type) &&
+               sch[s.id]?.[ds]?.[slot]?.role === "受付" &&
+               s.skills.includes("検査")
+      );
+      if (!cand) break;
+      setRole(sch, cand.id, ds, slot, "検査");
+    }
   } else {
     // ── 平日: 3フェーズのローテーション ─────────────────────
     const m1Roles = m1RolesByPhase[phase];
@@ -549,6 +563,57 @@ function assignWeeklyOff(sch: Schedule, dates: string[]) {
       sch[s.id][ds][slot] = { working: false, role: "休" };
     });
     weekIdx++;
+  });
+
+  // 第2パス: 月内合計休みがweek数に満たない人を別週で補完（週0→別週2を許容）
+  const numWeeks = weekMap.size;
+  const weeksList = Array.from(weekMap.values());
+
+  fulltimeStaff.forEach((s, staffIdx) => {
+    // 現在のシフト月内の合計休み枠数を数える
+    const totalOff = () => dates.filter((ds) => {
+      if (!isWorkDay(ds)) return false;
+      return (sch[s.id]?.[ds]?.am?.working === false) || (sch[s.id]?.[ds]?.pm?.working === false);
+    }).length;
+
+    if (totalOff() >= numWeeks) return;
+
+    const needed = numWeeks - totalOff();
+    let added = 0;
+
+    for (let wIdx = 0; wIdx < weeksList.length && added < needed; wIdx++) {
+      const wSlots = weeksList[wIdx];
+      // この週に既に休みがある週はスキップ（1週最大2休みで十分なので既存1休みの週は追加しない）
+      const hasOffThisWeek = wSlots.some(({ ds, slot }) => sch[s.id]?.[ds]?.[slot]?.working === false);
+      if (hasOffThisWeek) continue;
+
+      // 同じフィルタリングを適用
+      let cands = wSlots;
+      if (s.id === "murata") {
+        cands = cands.filter(({ ds, slot }) => {
+          const dow = new Date(ds).getDay();
+          if ((dow === 2 || dow === 4) && slot === "pm") return false;
+          return (hiranoFixed[dow] ?? []).includes(slot);
+        });
+      }
+      if (s.id !== "hirano") {
+        cands = cands.filter(({ ds }) => new Date(ds).getDay() !== 4);
+      }
+      if (s.type === "orthoptist" || s.type === "nurse") {
+        cands = cands.filter(({ ds, slot }) => {
+          const others = STAFF.filter(
+            (x) => x.type === s.type && x.id !== s.id && sch[x.id]?.[ds]?.[slot]?.working
+          );
+          return others.length >= 1;
+        });
+      }
+      if (cands.length === 0) continue;
+
+      const idx = (staffIdx + wIdx + added) % cands.length;
+      const { ds, slot } = cands[idx];
+      sch[s.id][ds][slot] = { working: false, role: "休" };
+      added++;
+    }
   });
 }
 
