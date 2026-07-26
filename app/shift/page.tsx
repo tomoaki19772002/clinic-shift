@@ -531,6 +531,17 @@ function assignWeeklyOff(sch: Schedule, dates: string[]) {
         candidates = candidates.filter(({ ds }) => new Date(ds).getDay() !== 4);
       }
 
+      // 必須職種（視能訓練士・ナース）が0人になるスロットは休み候補から除外
+      // 希望休みで同職種が既に休んでいる日に重ならないようにする
+      if (s.type === "orthoptist" || s.type === "nurse") {
+        candidates = candidates.filter(({ ds, slot }) => {
+          const othersWorking = STAFF.filter(
+            (x) => x.type === s.type && x.id !== s.id && sch[x.id]?.[ds]?.[slot]?.working
+          );
+          return othersWorking.length >= 1;
+        });
+      }
+
       if (candidates.length === 0) return;
 
       const idx = (staffIdx + weekIdx) % candidates.length;
