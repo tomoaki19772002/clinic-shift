@@ -17,6 +17,7 @@ type Role =
   | "洗浄"
   | "診察"
   | "レンズ"
+  | "リカバリー"
   | "休"
   | "有休"
   | "";
@@ -84,6 +85,7 @@ const ROLE_SHORT: Record<string, string> = {
   "洗浄":          "洗",
   "診察":          "診",
   "レンズ":        "Le",
+  "リカバリー":    "Rc",
   "有休":          "有",
 };
 
@@ -99,6 +101,7 @@ const ROLE_CLS: Record<string, string> = {
   洗浄:          "bg-orange-100 text-orange-700",
   診察:          "bg-teal-100 text-teal-700",
   レンズ:        "bg-cyan-100 text-cyan-700",
+  リカバリー:    "bg-lime-100 text-lime-800",
   休:            "bg-gray-100 text-gray-900",
   有休:          "bg-pink-100 text-pink-600",
   "":            "",
@@ -122,7 +125,7 @@ const STAFF: StaffDef[] = [
   // ② 視能訓練士
   {
     id: "komada", name: "駒田", type: "orthoptist", group: "②視能訓練士",
-    fulltime: true, skills: ["検査", "レンズ"], canWash: false,
+    fulltime: true, skills: ["検査", "レンズ", "リカバリー"], canWash: false,
   },
   {
     id: "hasegawa", name: "長谷川", type: "orthoptist", group: "②視能訓練士",
@@ -159,27 +162,27 @@ const STAFF: StaffDef[] = [
   // ⑤ 医療事務3
   {
     id: "watanabe", name: "渡邉", type: "medical3", group: "⑤医療事務3",
-    fulltime: true, skills: ["受付", "検査"], canWash: false,
+    fulltime: true, skills: ["受付", "検査", "リカバリー"], canWash: false,
   },
   {
     id: "hattori", name: "服部", type: "medical3", group: "⑤医療事務3",
-    fulltime: true, skills: ["受付", "検査"], canWash: false,
+    fulltime: true, skills: ["受付", "検査", "リカバリー"], canWash: false,
   },
   // ⑥ 医療事務4
   {
     id: "kasai", name: "笠井", type: "medical4", group: "⑥医療事務4",
-    fulltime: false, skills: ["受付"], canWash: false,
+    fulltime: false, skills: ["受付", "レジ"], canWash: false,
     weekShifts: 6,
   },
   // ⑦ 医療事務5
   {
     id: "miyamoto", name: "宮本", type: "medical5", group: "⑦医療事務5",
-    fulltime: true, skills: ["診察", "洗浄"], canWash: true,
+    fulltime: true, skills: ["診察", "洗浄", "受付"], canWash: true,
   },
   // ⑧ 医療事務6
   {
     id: "sugimoto", name: "杉本", type: "medical6", group: "⑧医療事務6",
-    fulltime: true, skills: ["検査", "手術補助"], canWash: false,
+    fulltime: true, skills: ["検査", "手術補助", "レジ", "受付"], canWash: false,
   },
 ];
 
@@ -1407,7 +1410,15 @@ export default function ShiftPage() {
                       className={`${cls} border border-slate-200 text-center cursor-pointer select-none px-1 py-0.5 relative min-w-[48px] font-bold`}
                       title={`${staff.name} ${ds} ${slot === "am" ? "午前" : "午後"}`}
                     >
-                      {cell.working ? (ROLE_SHORT[cell.role] ?? cell.role) || "○" : cell.role || "休"}
+                      {cell.working
+                        ? (ROLE_SHORT[cell.role] ?? cell.role) || "○"
+                        : (
+                          <>
+                            <span className="print:hidden">{cell.role || "休"}</span>
+                            <span className="hidden print:inline">{pref ? "希" : (cell.role || "休")}</span>
+                          </>
+                        )
+                      }
                       {cell.fixed && cell.working && (
                         <span className="absolute top-0 right-0 text-amber-500 leading-none" style={{ fontSize: "7px" }}>●</span>
                       )}
