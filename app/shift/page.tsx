@@ -144,29 +144,29 @@ const STAFF: StaffDef[] = [
   // ③ 医療事務1
   {
     id: "matsunaga", name: "松永", type: "medical1", group: "③医療事務1",
-    fulltime: true, skills: ["シュライバー①", "シュライバー②", "受付", "検査", "手術補助"], canWash: false,
+    fulltime: true, skills: ["シュライバー①", "シュライバー②", "受付", "検査", "手術補助", "診察"], canWash: false,
   },
   {
     id: "kinoshita", name: "木下", type: "medical1", group: "③医療事務1",
-    fulltime: true, skills: ["シュライバー①", "シュライバー②", "受付", "検査", "手術補助", "洗浄"], canWash: true,
+    fulltime: true, skills: ["シュライバー①", "シュライバー②", "受付", "検査", "手術補助", "洗浄", "診察"], canWash: true,
   },
   {
     id: "ohama", name: "大濱", type: "medical1", group: "③医療事務1",
-    fulltime: true, skills: ["シュライバー①", "シュライバー②", "受付", "検査", "手術補助", "洗浄"], canWash: true,
+    fulltime: true, skills: ["シュライバー①", "シュライバー②", "受付", "検査", "手術補助", "洗浄", "診察"], canWash: true,
   },
   // ④ 医療事務2
   {
     id: "taniguchi", name: "谷口", type: "medical2", group: "④医療事務2",
-    fulltime: true, skills: ["シュライバー①", "シュライバー②", "受付", "手術補助"], canWash: false,
+    fulltime: true, skills: ["シュライバー①", "シュライバー②", "受付", "手術補助", "診察"], canWash: false,
   },
   // ⑤ 医療事務3
   {
     id: "watanabe", name: "渡邉", type: "medical3", group: "⑤医療事務3",
-    fulltime: true, skills: ["受付", "検査", "リカバリー"], canWash: false,
+    fulltime: true, skills: ["受付", "検査", "リカバリー", "診察"], canWash: false,
   },
   {
     id: "hattori", name: "服部", type: "medical3", group: "⑤医療事務3",
-    fulltime: true, skills: ["受付", "検査", "リカバリー"], canWash: false,
+    fulltime: true, skills: ["受付", "検査", "リカバリー", "診察"], canWash: false,
   },
   // ⑥ 医療事務4
   {
@@ -177,12 +177,12 @@ const STAFF: StaffDef[] = [
   // ⑦ 医療事務5
   {
     id: "miyamoto", name: "宮本", type: "medical5", group: "⑦医療事務5",
-    fulltime: true, skills: ["診察", "洗浄", "受付"], canWash: true,
+    fulltime: true, skills: ["診察", "洗浄", "受付", "検査"], canWash: true,
   },
   // ⑧ 医療事務6
   {
     id: "sugimoto", name: "杉本", type: "medical6", group: "⑧医療事務6",
-    fulltime: true, skills: ["検査", "手術補助", "レジ", "受付"], canWash: false,
+    fulltime: true, skills: ["検査", "手術補助", "レジ", "受付", "診察"], canWash: false,
   },
 ];
 
