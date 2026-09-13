@@ -1026,6 +1026,9 @@ export default function ShiftPage() {
   const [modal, setModal] = useState<{ staffId: string; ds: string; slot: Slot } | null>(null);
   const [prefOff, setPrefOff] = useState<PrefOff>({});
   const [prefMode, setPrefMode] = useState(false);
+  const [paidLeave, setPaidLeave] = useState<Record<string, string>>(() => {
+    try { return JSON.parse(localStorage.getItem("paidLeave") ?? "{}") as Record<string, string>; } catch { return {}; }
+  });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showWarns, setShowWarns] = useState(false);
   const [savedMonths, setSavedMonths] = useState<Set<string>>(() => {
@@ -1066,6 +1069,12 @@ export default function ShiftPage() {
     setMonth(m);
     setSch(loadFromStorage(year, m) ?? generate(year, m));
     setShowWarns(false);
+  }
+
+  function handlePaidLeaveChange(staffId: string, value: string) {
+    const next = { ...paidLeave, [staffId]: value };
+    setPaidLeave(next);
+    try { localStorage.setItem("paidLeave", JSON.stringify(next)); } catch {}
   }
 
   function handleGenerate() {
@@ -1342,9 +1351,9 @@ export default function ShiftPage() {
                 氏名
               </th>
               {cols.map(({ ds }) => {
-                const d   = new Date(ds);
-                const dow = d.getDay();
-                const hol = HOLIDAYS.has(ds);
+                const d    = new Date(ds);
+                const dow  = d.getDay();
+                const hol  = HOLIDAYS.has(ds);
                 const work = isWorkDay(ds);
                 const bg  =
                   !work || hol || dow === 0 ? "bg-red-700"
@@ -1360,6 +1369,10 @@ export default function ShiftPage() {
                   </th>
                 );
               })}
+              <th className="bg-amber-700 text-white border border-slate-600 text-center px-1 py-1 whitespace-nowrap">
+                <div className="text-xs">有休</div>
+                <div className="text-xs">残</div>
+              </th>
             </tr>
           </thead>
 
@@ -1372,7 +1385,7 @@ export default function ShiftPage() {
                   const hol = HOLIDAYS.has(ds);
                   const work = isWorkDay(ds);
                   if (!work) {
-                    return <td key={ci} className={`border border-slate-200 ${hol || dow === 0 ? "bg-black" : "bg-slate-100"}`} />;
+                    return <td key={ci} className={`holiday-black border border-slate-200 ${hol || dow === 0 ? "bg-black" : "bg-slate-100"}`} />;
                   }
                   if (slot === "pm" && dow === 6) {
                     return <td key={ci} className="border border-slate-200 bg-slate-50" />;
@@ -1441,6 +1454,17 @@ export default function ShiftPage() {
                       午前
                     </td>
                     {cols.map(({ ds }, ci) => renderCell(ds, "am", ci))}
+                    <td rowSpan={2} className="border border-amber-200 bg-amber-50 text-center align-middle print:bg-white" style={{ minWidth: "36px", width: "36px" }}>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={paidLeave[staff.id] ?? ""}
+                        onChange={e => handlePaidLeaveChange(staff.id, e.target.value)}
+                        className="w-full text-center text-xs font-bold bg-transparent border-none outline-none print:hidden"
+                        style={{ minWidth: 0 }}
+                      />
+                      <span className="hidden print:inline text-xs font-bold">{paidLeave[staff.id] ?? ""}</span>
+                    </td>
                   </tr>,
                   // 午後行
                   <tr key={`${staff.id}-pm`} className="hover:bg-blue-50">
@@ -1474,6 +1498,7 @@ export default function ShiftPage() {
                   </td>
                 );
               })}
+              <td rowSpan={4} className="border border-amber-200 bg-amber-50" />
             </tr>
             <tr key="sum-rec-pm">
               <td className="sticky left-[73px] z-10 bg-slate-100 border border-slate-300 px-1 text-center text-xs font-semibold text-slate-500 whitespace-nowrap select-none">
