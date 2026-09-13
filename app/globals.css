@@ -118,13 +118,19 @@ body {
     padding: 0 !important;
   }
 
-  /* テーブルをページ全幅に引き伸ばす */
+  /* テーブルをページ全体（横幅・縦幅）に引き伸ばす */
   table {
     border-collapse: collapse !important;
     table-layout: auto !important;
     min-width: 0 !important;
     width: 100% !important;
+    height: 200mm !important;   /* A4横 210mm - 上下余白 5mm×2 */
     margin: 0 !important;
+  }
+
+  /* セル内容を縦中央揃えにして行が伸びても見やすく */
+  th, td {
+    vertical-align: middle !important;
   }
 
   /* ① sticky の残留オフセットをリセット → 名前の左欠けを修正
