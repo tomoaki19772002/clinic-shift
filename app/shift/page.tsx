@@ -187,6 +187,15 @@ const STAFF: StaffDef[] = [
 ];
 
 // ============================================================
+// DISPLAY ORDER (表示順)
+// ============================================================
+const DISPLAY_ORDER = [
+  "murata", "hirano", "komada", "okamura", "hasegawa", "nishibata",
+  "watanabe", "taniguchi", "matsunaga", "sugimoto", "kinoshita",
+  "hattori", "ohama", "miyamoto", "kasai",
+];
+
+// ============================================================
 // DATE UTILITIES
 // ============================================================
 function toDateStr(d: Date): string {
@@ -207,14 +216,14 @@ function getRange(year: number, month: number): string[] {
   return dates;
 }
 
-function isWorkDay(ds: string): boolean {
+function isWorkDay(ds: string, extra: Set<string> = new Set()): boolean {
   const dow = new Date(ds).getDay();
-  return dow !== 0 && !HOLIDAYS.has(ds);
+  return dow !== 0 && !HOLIDAYS.has(ds) && !extra.has(ds);
 }
 
-function hasPM(ds: string): boolean {
+function hasPM(ds: string, extra: Set<string> = new Set()): boolean {
   const dow = new Date(ds).getDay();
-  return isWorkDay(ds) && dow !== 6; // Sat = AM only
+  return isWorkDay(ds, extra) && dow !== 6; // Sat = AM only
 }
 
 // ISO week key for grouping
@@ -508,17 +517,17 @@ function assignSurgery(sch: Schedule, ds: string, slot: Slot, working: StaffDef[
 // ============================================================
 // 常勤スタッフ週1枠の休み付与
 // ============================================================
-function assignWeeklyOff(sch: Schedule, dates: string[]) {
+function assignWeeklyOff(sch: Schedule, dates: string[], clinicHols: Set<string> = new Set()) {
   const fulltimeStaff = STAFF.filter((s) => s.fulltime);
 
   // 週ごとの稼働スロットを収集
   const weekMap = new Map<string, Array<{ ds: string; slot: Slot }>>();
   dates.forEach((ds) => {
-    if (!isWorkDay(ds)) return;
+    if (!isWorkDay(ds, clinicHols)) return;
     const wk = weekKey(new Date(ds));
     if (!weekMap.has(wk)) weekMap.set(wk, []);
     weekMap.get(wk)!.push({ ds, slot: "am" });
-    if (hasPM(ds)) weekMap.get(wk)!.push({ ds, slot: "pm" });
+    if (hasPM(ds, clinicHols)) weekMap.get(wk)!.push({ ds, slot: "pm" });
   });
 
   // 平野の固定スケジュール（村田の休み候補を絞るために使用）
@@ -575,7 +584,7 @@ function assignWeeklyOff(sch: Schedule, dates: string[]) {
   fulltimeStaff.forEach((s, staffIdx) => {
     // 現在のシフト月内の合計休み枠数を数える
     const totalOff = () => dates.filter((ds) => {
-      if (!isWorkDay(ds)) return false;
+      if (!isWorkDay(ds, clinicHols)) return false;
       return (sch[s.id]?.[ds]?.am?.working === false) || (sch[s.id]?.[ds]?.pm?.working === false);
     }).length;
 
@@ -623,7 +632,7 @@ function assignWeeklyOff(sch: Schedule, dates: string[]) {
 // ============================================================
 // MAIN GENERATOR
 // ============================================================
-function generate(year: number, month: number, prefOff: PrefOff = {}): Schedule {
+function generate(year: number, month: number, prefOff: PrefOff = {}, clinicHols: Set<string> = new Set()): Schedule {
   const sch: Schedule = {};
   STAFF.forEach((s) => { sch[s.id] = {}; });
   const dates = getRange(year, month);
@@ -632,8 +641,8 @@ function generate(year: number, month: number, prefOff: PrefOff = {}): Schedule 
   dates.forEach((ds) => {
     const d = new Date(ds);
     const dow = d.getDay();
-    const work = isWorkDay(ds);
-    const pm = hasPM(ds);
+    const work = isWorkDay(ds, clinicHols);
+    const pm = hasPM(ds, clinicHols);
 
     STAFF.forEach((s) => {
       let amW = false, pmW = false;
@@ -663,7 +672,7 @@ function generate(year: number, month: number, prefOff: PrefOff = {}): Schedule 
   // Step 2: 笠井の週6枠を割り当て (午前優先)
   const weekSlots: Record<string, Array<{ ds: string; slot: Slot }>> = {};
   dates.forEach((ds) => {
-    if (!isWorkDay(ds)) return;
+    if (!isWorkDay(ds, clinicHols)) return;
     const d = new Date(ds);
     const dow = d.getDay();
     const wk = weekKey(d);
@@ -723,11 +732,11 @@ function generate(year: number, month: number, prefOff: PrefOff = {}): Schedule 
 
   // Step 2.6: 常勤スタッフに週1枠の休みを付与
   // 希望休みで既に休みがある週はスキップ → 希望休み = その週の週1休みとして機能
-  assignWeeklyOff(sch, dates);
+  assignWeeklyOff(sch, dates, clinicHols);
 
   // Step 3: 役割を割り当て
   dates.forEach((ds) => {
-    if (!isWorkDay(ds)) return;
+    if (!isWorkDay(ds, clinicHols)) return;
     const d = new Date(ds);
     const dow = d.getDay();
     const isSat = dow === 6;
@@ -759,7 +768,7 @@ function generate(year: number, month: number, prefOff: PrefOff = {}): Schedule 
 
     const wkDatesMap: Record<string, string[]> = {};
     dates.forEach((ds) => {
-      if (!isWorkDay(ds)) return;
+      if (!isWorkDay(ds, clinicHols)) return;
       const wk = weekKey(new Date(ds));
       if (!wkDatesMap[wk]) wkDatesMap[wk] = [];
       wkDatesMap[wk].push(ds);
@@ -806,7 +815,7 @@ function generate(year: number, month: number, prefOff: PrefOff = {}): Schedule 
       const s2: Array<{ ds: string; slot: Slot }> = [];
 
       dates.forEach((ds) => {
-        if (!isWorkDay(ds)) return;
+        if (!isWorkDay(ds, clinicHols)) return;
         const dow = new Date(ds).getDay();
         const slots: Slot[] = dow === 6 ? ["am"] : ["am", "pm"];
         slots.forEach((slot) => {
@@ -837,7 +846,7 @@ function generate(year: number, month: number, prefOff: PrefOff = {}): Schedule 
 
   // Step 4: 固定役割の上書き（ロールアサイン後に適用）
   dates.forEach((ds) => {
-    if (!isWorkDay(ds)) return;
+    if (!isWorkDay(ds, clinicHols)) return;
     const dow = new Date(ds).getDay();
 
     // 杉本: 午後に受付が割り当てられている場合は検査に変換（受付業務なし）
@@ -871,7 +880,7 @@ function generate(year: number, month: number, prefOff: PrefOff = {}): Schedule 
     // 週ごとのターゲットスロットを収集
     const weekTargetSlots: Record<string, Array<{ ds: string; slot: Slot }>> = {};
     dates.forEach((ds) => {
-      if (!isWorkDay(ds)) return;
+      if (!isWorkDay(ds, clinicHols)) return;
       const wk = weekKey(new Date(ds));
       if (!weekTargetSlots[wk]) weekTargetSlots[wk] = [];
       const dow = new Date(ds).getDay();
@@ -1031,6 +1040,13 @@ export default function ShiftPage() {
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showWarns, setShowWarns] = useState(false);
+  const [clinicHolidays, setClinicHolidays] = useState<Set<string>>(() => {
+    try {
+      const arr = JSON.parse(localStorage.getItem("clinicHolidays") ?? "[]") as string[];
+      return new Set(arr);
+    } catch { return new Set(); }
+  });
+  const [clinicHolMode, setClinicHolMode] = useState(false);
   const [savedMonths, setSavedMonths] = useState<Set<string>>(() => {
     // 保存済みキー一覧を初期化
     const keys = new Set<string>();
@@ -1049,25 +1065,16 @@ export default function ShiftPage() {
   // 列定義: 日付1つにつき1列（AM/PMは縦積みで表示）
   const cols = useMemo<ColDef[]>(() => dates.map((ds) => ({ ds })), [dates]);
 
-  // グループ別スタッフ
-  const groups = useMemo(() => {
-    const map = new Map<string, StaffDef[]>();
-    STAFF.forEach((s) => {
-      if (!map.has(s.group)) map.set(s.group, []);
-      map.get(s.group)!.push(s);
-    });
-    return Array.from(map.entries());
-  }, []);
 
   // 年月切替: 保存済みがあれば読込、なければ新規生成
   function handleYearChange(y: number) {
     setYear(y);
-    setSch(loadFromStorage(y, month) ?? generate(y, month));
+    setSch(loadFromStorage(y, month) ?? generate(y, month, {}, clinicHolidays));
     setShowWarns(false);
   }
   function handleMonthChange(m: number) {
     setMonth(m);
-    setSch(loadFromStorage(year, m) ?? generate(year, m));
+    setSch(loadFromStorage(year, m) ?? generate(year, m, {}, clinicHolidays));
     setShowWarns(false);
   }
 
@@ -1078,15 +1085,24 @@ export default function ShiftPage() {
   }
 
   function handleGenerate() {
-    setSch(generate(year, month));
+    setSch(generate(year, month, {}, clinicHolidays));
     setShowWarns(false);
   }
 
   // ③ 希望休みを反映してシフト再編成
   function handlePrefRegenerate() {
-    setSch(generate(year, month, prefOff));
+    setSch(generate(year, month, prefOff, clinicHolidays));
     setShowWarns(false);
     setPrefMode(false);
+  }
+
+  function toggleClinicHoliday(ds: string) {
+    setClinicHolidays((prev) => {
+      const next = new Set(prev);
+      if (next.has(ds)) { next.delete(ds); } else { next.add(ds); }
+      try { localStorage.setItem("clinicHolidays", JSON.stringify(Array.from(next))); } catch {}
+      return next;
+    });
   }
 
   // 希望休みのオン/オフ切り替え
@@ -1223,7 +1239,7 @@ export default function ShiftPage() {
         </button>
 
         <button
-          onClick={() => { setPrefMode((v) => !v); }}
+          onClick={() => { setPrefMode((v) => !v); setClinicHolMode(false); }}
           className={`px-3 py-1 rounded text-sm font-bold ${
             prefMode
               ? "bg-orange-500 hover:bg-orange-400 ring-2 ring-white"
@@ -1231,6 +1247,17 @@ export default function ShiftPage() {
           }`}
         >
           {prefMode ? "希望休み設定中…" : "②希望休み設定"}
+        </button>
+
+        <button
+          onClick={() => { setClinicHolMode((v) => !v); setPrefMode(false); }}
+          className={`px-3 py-1 rounded text-sm font-bold ${
+            clinicHolMode
+              ? "bg-red-600 hover:bg-red-500 ring-2 ring-white"
+              : "bg-red-700 hover:bg-red-600"
+          }`}
+        >
+          {clinicHolMode ? "独自休日設定中…" : "独自休日設定"}
         </button>
 
         <button
@@ -1311,6 +1338,29 @@ export default function ShiftPage() {
         </div>
       )}
 
+      {/* ── 独自休日設定モードバー ── */}
+      {clinicHolMode && (
+        <div className="flex-shrink-0 bg-red-100 border-b border-red-300 px-4 py-2 flex items-center gap-3 print:hidden">
+          <span className="text-red-800 font-bold text-sm">🔴 独自休日設定中</span>
+          <span className="text-red-700 text-xs">日付ヘッダーをタップ → 独自休日のオン/オフ（黒塗り）</span>
+          {clinicHolidays.size > 0 && (
+            <span className="text-red-600 text-xs font-bold">{clinicHolidays.size}日設定中</span>
+          )}
+          <button
+            onClick={() => { setClinicHolidays(new Set()); try { localStorage.removeItem("clinicHolidays"); } catch {} }}
+            className="ml-auto text-xs bg-white border border-red-400 text-red-700 px-2 py-0.5 rounded hover:bg-red-50"
+          >
+            すべてクリア
+          </button>
+          <button
+            onClick={() => setClinicHolMode(false)}
+            className="text-xs bg-red-600 text-white px-3 py-0.5 rounded hover:bg-red-500"
+          >
+            設定完了
+          </button>
+        </div>
+      )}
+
       {/* ── 警告パネル ── */}
       {showWarns && warns.length > 0 && (
         <div className="flex-shrink-0 bg-red-50 border-b border-red-200 px-4 py-2 max-h-32 overflow-y-auto print:hidden">
@@ -1354,18 +1404,22 @@ export default function ShiftPage() {
                 const d    = new Date(ds);
                 const dow  = d.getDay();
                 const hol  = HOLIDAYS.has(ds);
-                const work = isWorkDay(ds);
+                const cHol = clinicHolidays.has(ds);
+                const work = isWorkDay(ds, clinicHolidays);
                 const bg  =
-                  !work || hol || dow === 0 ? "bg-red-700"
+                  cHol                      ? "bg-gray-900 cursor-pointer"
+                  : !work || hol || dow === 0 ? "bg-red-700"
                   : dow === 6               ? "bg-blue-700"
+                                            : clinicHolMode ? "bg-slate-700 cursor-pointer hover:bg-red-800"
                                             : "bg-slate-700";
                 return (
                   <th
                     key={ds}
-                    className={`${bg} text-white border border-slate-600 text-center px-1 py-1 whitespace-nowrap`}
+                    onClick={clinicHolMode && dow !== 0 && !hol ? () => toggleClinicHoliday(ds) : undefined}
+                    className={`${bg} text-white border border-slate-600 text-center px-1 py-1 whitespace-nowrap select-none`}
                   >
                     <div className="text-xs">{d.getMonth() + 1}/{d.getDate()}</div>
-                    <div className="text-xs opacity-75">({DOW_JP[dow]}){hol ? "祝" : ""}</div>
+                    <div className="text-xs opacity-75">({DOW_JP[dow]}){hol ? "祝" : cHol ? "休" : ""}</div>
                   </th>
                 );
               })}
@@ -1377,15 +1431,17 @@ export default function ShiftPage() {
           </thead>
 
           <tbody>
-            {groups.flatMap(([, staffList]) => [
-              // スタッフ行: 午前・午後で2行ずつ（グループヘッダー行は非表示）
-              ...staffList.flatMap((staff: StaffDef) => {
+            {DISPLAY_ORDER.flatMap((sid) => {
+              const staff = STAFF.find((s) => s.id === sid);
+              if (!staff) return [];
+              return ((staff) => {
                 const renderCell = (ds: string, slot: Slot, ci: number) => {
                   const dow = new Date(ds).getDay();
                   const hol = HOLIDAYS.has(ds);
-                  const work = isWorkDay(ds);
+                  const cHol = clinicHolidays.has(ds);
+                  const work = isWorkDay(ds, clinicHolidays);
                   if (!work) {
-                    return <td key={ci} className={`holiday-black border border-slate-200 ${hol || dow === 0 ? "bg-black" : "bg-slate-100"}`} />;
+                    return <td key={ci} className={`holiday-black border border-slate-200 ${hol || dow === 0 || cHol ? "bg-black" : "bg-slate-100"}`} />;
                   }
                   if (slot === "pm" && dow === 6) {
                     return <td key={ci} className="border border-slate-200 bg-slate-50" />;
@@ -1474,8 +1530,8 @@ export default function ShiftPage() {
                     {cols.map(({ ds }, ci) => renderCell(ds, "pm", ci))}
                   </tr>,
                 ];
-              }),
-            ])}
+              })(staff);
+            })}
 
             {/* ── 集計行: 受付人数（受付+レジ）── */}
             <tr key="sum-rec-am" className="staff-divider am-row">
@@ -1486,7 +1542,7 @@ export default function ShiftPage() {
                 午前
               </td>
               {cols.map(({ ds }) => {
-                if (!isWorkDay(ds)) return <td key={ds} className="bg-black border border-slate-300" />;
+                if (!isWorkDay(ds, clinicHolidays)) return <td key={ds} className="bg-black border border-slate-300" />;
                 const count = STAFF.filter((s) => {
                   const cell = sch[s.id]?.[ds]?.am;
                   return cell?.working === true && (cell.role === "受付" || cell.role === "レジ");
@@ -1505,8 +1561,8 @@ export default function ShiftPage() {
                 午後
               </td>
               {cols.map(({ ds }) => {
-                if (!isWorkDay(ds)) return <td key={ds} className="bg-black border border-slate-300" />;
-                if (!hasPM(ds)) return <td key={ds} className="bg-slate-200 border border-slate-300" />;
+                if (!isWorkDay(ds, clinicHolidays)) return <td key={ds} className="bg-black border border-slate-300" />;
+                if (!hasPM(ds, clinicHolidays)) return <td key={ds} className="bg-slate-200 border border-slate-300" />;
                 const count = STAFF.filter((s) => {
                   const cell = sch[s.id]?.[ds]?.pm;
                   return cell?.working === true && (cell.role === "受付" || cell.role === "レジ");
@@ -1529,7 +1585,7 @@ export default function ShiftPage() {
                 午前
               </td>
               {cols.map(({ ds }) => {
-                if (!isWorkDay(ds)) return <td key={ds} className="bg-black border border-slate-300" />;
+                if (!isWorkDay(ds, clinicHolidays)) return <td key={ds} className="bg-black border border-slate-300" />;
                 const count = STAFF.filter((s) => {
                   const cell = sch[s.id]?.[ds]?.am;
                   return cell?.working === true && cell.role === "検査";
@@ -1547,8 +1603,8 @@ export default function ShiftPage() {
                 午後
               </td>
               {cols.map(({ ds }) => {
-                if (!isWorkDay(ds)) return <td key={ds} className="bg-black border border-slate-300" />;
-                if (!hasPM(ds)) return <td key={ds} className="bg-teal-100 border border-slate-300" />;
+                if (!isWorkDay(ds, clinicHolidays)) return <td key={ds} className="bg-black border border-slate-300" />;
+                if (!hasPM(ds, clinicHolidays)) return <td key={ds} className="bg-teal-100 border border-slate-300" />;
                 const count = STAFF.filter((s) => {
                   const cell = sch[s.id]?.[ds]?.pm;
                   return cell?.working === true && cell.role === "検査";
